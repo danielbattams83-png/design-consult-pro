@@ -1,0 +1,283 @@
+@if (activeRoom(); as room) {
+  <div class="space-y-6">
+    <!-- Top Room Metrics Bar (Professional Polish theme) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- Floor Area -->
+      <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-orange-200 transition-colors">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Floor Area</span>
+          <mat-icon class="text-orange-500 text-[18px] w-[18px] h-[18px]">aspect_ratio</mat-icon>
+        </div>
+        <div class="mt-2 text-xl sm:text-2xl font-bold font-mono-digits text-slate-900">
+          {{ room.dimensions.calculatedFloorArea || 0 }}
+          <span class="text-xs font-semibold text-orange-600 uppercase">{{ unit() === 'metric' ? 'm²' : 'sq ft' }}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Net usable walkable floor</div>
+      </div>
+
+      <!-- Perimeter -->
+      <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Perimeter (LF)</span>
+          <mat-icon class="text-slate-400 text-[18px] w-[18px] h-[18px]">square_foot</mat-icon>
+        </div>
+        <div class="mt-2 text-xl sm:text-2xl font-bold font-mono-digits text-slate-900">
+          {{ room.dimensions.calculatedPerimeter || 0 }}
+          <span class="text-xs font-semibold text-slate-500 uppercase">{{ unit() === 'metric' ? 'm' : 'lin ft' }}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Baseboard &amp; crown takeoff</div>
+      </div>
+
+      <!-- Wall Surface Paint Area -->
+      <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Paintable Walls</span>
+          <mat-icon class="text-slate-400 text-[18px] w-[18px] h-[18px]">format_paint</mat-icon>
+        </div>
+        <div class="mt-2 text-xl sm:text-2xl font-bold font-mono-digits text-slate-900">
+          {{ room.dimensions.calculatedWallSurface || 0 }}
+          <span class="text-xs font-semibold text-slate-500 uppercase">{{ unit() === 'metric' ? 'm²' : 'sq ft' }}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Deducted doors &amp; windows</div>
+      </div>
+
+      <!-- Volume -->
+      <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">HVAC Volume</span>
+          <mat-icon class="text-slate-400 text-[18px] w-[18px] h-[18px]">air</mat-icon>
+        </div>
+        <div class="mt-2 text-xl sm:text-2xl font-bold font-mono-digits text-slate-900">
+          {{ room.dimensions.calculatedVolume || 0 }}
+          <span class="text-xs font-semibold text-slate-500 uppercase">{{ unit() === 'metric' ? 'm³' : 'cu ft' }}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">&#64; {{ room.dimensions.ceilingHeightFt || 9.5 }}' Ceiling clear</div>
+      </div>
+    </div>
+
+    <!-- Main Workspace: 2D Canvas & Side Inspector -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left: Interactive Canvas -->
+      <div class="lg:col-span-8 space-y-4">
+        <app-room-canvas></app-room-canvas>
+
+        <!-- Diagonal Calculator Integration -->
+        <app-diagonal-calculator></app-diagonal-calculator>
+      </div>
+
+      <!-- Right: Dimension Inspector & Openings Tab Panel -->
+      <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <!-- Sub-tabs -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-bold text-slate-600">
+          <button
+            type="button"
+            (click)="activeSubTab.set('canvas')"
+            class="flex-1 py-1.5 rounded-md transition-colors cursor-pointer"
+            [class.bg-slate-900]="activeSubTab() === 'canvas'"
+            [class.text-white]="activeSubTab() === 'canvas'"
+            [class.shadow-xs]="activeSubTab() === 'canvas'"
+          >
+            Walls
+          </button>
+          <button
+            type="button"
+            (click)="activeSubTab.set('openings')"
+            class="flex-1 py-1.5 rounded-md transition-colors cursor-pointer"
+            [class.bg-slate-900]="activeSubTab() === 'openings'"
+            [class.text-white]="activeSubTab() === 'openings'"
+            [class.shadow-xs]="activeSubTab() === 'openings'"
+          >
+            Doors/Windows
+          </button>
+          <button
+            type="button"
+            (click)="activeSubTab.set('surfaces')"
+            class="flex-1 py-1.5 rounded-md transition-colors cursor-pointer"
+            [class.bg-slate-900]="activeSubTab() === 'surfaces'"
+            [class.text-white]="activeSubTab() === 'surfaces'"
+            [class.shadow-xs]="activeSubTab() === 'surfaces'"
+          >
+            Finishes
+          </button>
+        </div>
+
+        <!-- Tab 1: Walls List -->
+        @if (activeSubTab() === 'canvas') {
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Wall Segments</span>
+              <span class="text-[11px] text-slate-500 font-mono-digits font-bold">{{ room.dimensions.walls.length }} Walls</span>
+            </div>
+
+            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+              @for (wall of room.dimensions.walls; track wall.id) {
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="font-bold text-slate-900">{{ wall.name }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 font-bold text-slate-700 uppercase">{{ wall.orientation }}</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label [for]="'wall-len-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Length ({{ unit() === 'metric' ? 'm' : 'ft' }})</label>
+                      <input
+                        [id]="'wall-len-' + wall.id"
+                        type="number"
+                        step="0.25"
+                        [value]="wall.lengthFt"
+                        (change)="updateWallLength(wall.id, $any($event.target).value)"
+                        class="w-full px-2.5 py-1 bg-white border border-slate-300 rounded font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label [for]="'wall-ht-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Height ({{ unit() === 'metric' ? 'm' : 'ft' }})</label>
+                      <input
+                        [id]="'wall-ht-' + wall.id"
+                        type="number"
+                        step="0.25"
+                        [value]="wall.heightFt"
+                        (change)="updateWallHeight(wall.id, $any($event.target).value)"
+                        class="w-full px-2.5 py-1 bg-white border border-slate-300 rounded font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Tab 2: Doors & Windows Openings -->
+        @if (activeSubTab() === 'openings') {
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Openings Deductions</span>
+              <div class="flex gap-1">
+                <button
+                  type="button"
+                  (click)="addOpening('door')"
+                  class="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded cursor-pointer transition-colors shadow-2xs"
+                >
+                  + Door
+                </button>
+                <button
+                  type="button"
+                  (click)="addOpening('window')"
+                  class="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded cursor-pointer transition-colors shadow-2xs"
+                >
+                  + Window
+                </button>
+              </div>
+            </div>
+
+            @if (room.openings.length > 0) {
+              <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                @for (op of room.openings; track op.id) {
+                  <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                    <div class="flex items-center justify-between mb-1.5">
+                      <div class="flex items-center gap-1.5 font-bold text-slate-900 capitalize">
+                        <mat-icon class="text-[16px] w-[16px] h-[16px] text-orange-500">
+                          {{ op.type === 'window' ? 'window' : 'meeting_room' }}
+                        </mat-icon>
+                        <span>{{ op.type.replace('_', ' ') }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="removeOpening(op.id)"
+                        class="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5 transition-colors"
+                        title="Remove opening"
+                      >
+                        <mat-icon class="text-[15px] w-[15px] h-[15px]">delete</mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span class="text-slate-500">Width: </span>
+                        <span class="font-bold font-mono-digits text-slate-800">{{ op.widthInches }}"</span>
+                      </div>
+                      <div>
+                        <span class="text-slate-500">Height: </span>
+                        <span class="font-bold font-mono-digits text-slate-800">{{ op.heightInches }}"</span>
+                      </div>
+                      <div class="col-span-2 text-slate-500 text-[10px]">
+                        Casing: <span class="text-slate-800 font-medium">{{ op.casingDetails || op.notes || '-' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="text-xs text-slate-400 italic text-center py-4">
+                No openings recorded. Add doors or windows to automatically subtract from wall paint takeoffs.
+              </p>
+            }
+          </div>
+        }
+
+        <!-- Tab 3: Existing Finishes -->
+        @if (activeSubTab() === 'surfaces') {
+          <div class="space-y-3 text-xs">
+            <div>
+              <label for="flooring-type-select" class="block font-bold text-slate-700 mb-1">Flooring Specification</label>
+              <select
+                id="flooring-type-select"
+                [value]="room.existingFinishes?.flooringType || presetMaterials.flooring[0]"
+                (change)="updateFlooringType($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500 cursor-pointer font-medium"
+              >
+                @for (fl of presetMaterials.flooring; track fl) {
+                  <option [value]="fl">{{ fl }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label for="wall-finish-select" class="block font-bold text-slate-700 mb-1">Wall Finish &amp; Texture</label>
+              <select
+                id="wall-finish-select"
+                [value]="room.existingFinishes?.wallFinish || presetMaterials.walls[0]"
+                (change)="updateWallFinish($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500 cursor-pointer font-medium"
+              >
+                @for (wf of presetMaterials.walls; track wf) {
+                  <option [value]="wf">{{ wf }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label for="ceiling-type-select" class="block font-bold text-slate-700 mb-1">Ceiling Architecture</label>
+              <select
+                id="ceiling-type-select"
+                [value]="room.existingFinishes?.ceilingType || presetMaterials.ceilings[0]"
+                (change)="updateCeilingType($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500 cursor-pointer font-medium"
+              >
+                @for (ct of presetMaterials.ceilings; track ct) {
+                  <option [value]="ct">{{ ct }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label for="baseboard-height-input" class="block font-bold text-slate-700 mb-1">Baseboard Trim Height</label>
+              <div class="flex items-center gap-1.5">
+                <input
+                  id="baseboard-height-input"
+                  type="number"
+                  step="0.5"
+                  [value]="room.existingFinishes?.baseboardHeightInches || 5.5"
+                  (change)="updateBaseboard($any($event.target).value)"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+                />
+                <span class="text-xs font-bold text-slate-600">in</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+

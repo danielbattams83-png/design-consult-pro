@@ -1,0 +1,323 @@
+<div class="space-y-4">
+  <!-- Upload / Capture Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
+    <div>
+      <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <mat-icon class="text-orange-600 text-[20px] w-[20px] h-[20px]">add_a_photo</mat-icon>
+        <span>Site Photos & Dimension Markup</span>
+      </h3>
+      <p class="text-xs text-slate-500 mt-0.5">Capture field conditions, tap on photos to place dimension callouts & inspection flags.</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <input #fileInput type="file" accept="image/*" capture="environment" (change)="handleFileUpload($event)" class="hidden" />
+      
+      <button
+        type="button"
+        id="take-photo-btn"
+        (click)="fileInput.click()"
+        class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]">photo_camera</mat-icon>
+        <span>Add Photo / Camera</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Photo Grid -->
+  @if (activeRoom()?.photos?.length) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (photo of activeRoom()?.photos; track photo.id) {
+        <div class="group relative bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all">
+          <button
+            type="button"
+            class="w-full text-left relative aspect-4/3 bg-slate-100 overflow-hidden cursor-pointer block p-0 border-0"
+            (click)="selectPhoto(photo)"
+          >
+            <img [src]="photo.dataUrl" [alt]="photo.caption" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200" referrerpolicy="no-referrer" />
+            
+            <!-- Pin Count Badge -->
+            @if (photo.annotations.length > 0) {
+              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
+                <mat-icon class="text-orange-400 text-[14px] w-[14px] h-[14px]">push_pin</mat-icon>
+                <span>{{ photo.annotations.length }} Pin{{ photo.annotations.length > 1 ? 's' : '' }}</span>
+              </div>
+            }
+
+            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">edit_location_alt</mat-icon>
+              <span>Tap to Mark Up & Annotate</span>
+            </div>
+          </button>
+
+          <div class="p-3">
+            <div class="flex items-start justify-between gap-2">
+              <h4 class="text-xs font-semibold text-slate-900 line-clamp-1">{{ photo.caption }}</h4>
+              <button
+                type="button"
+                (click)="deletePhoto(photo.id); $event.stopPropagation()"
+                class="text-slate-400 hover:text-rose-600 transition-colors p-0.5 cursor-pointer"
+                title="Delete Photo"
+              >
+                <mat-icon class="text-[16px] w-[16px] h-[16px]">delete</mat-icon>
+              </button>
+            </div>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-1 mt-2">
+              @for (tag of photo.tags; track tag) {
+                <span class="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{{ tag }}</span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- Empty State with Quick Samples -->
+    <div class="bg-white rounded-xl border border-dashed border-slate-300 p-8 text-center">
+      <div class="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3">
+        <mat-icon class="text-[24px] w-[24px] h-[24px]">collections</mat-icon>
+      </div>
+      <h4 class="text-sm font-bold text-slate-800">No field photos added to {{ activeRoom()?.name }}</h4>
+      <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
+        Snap pictures on site or upload existing blueprints. You can pin laser measurement callouts, mark electrical outlets, or flag structural imperfections directly onto the image.
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          (click)="fileInput.click()"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+        >
+          <mat-icon class="text-[16px] w-[16px] h-[16px]">add_a_photo</mat-icon>
+          <span>Upload / Take Photo</span>
+        </button>
+
+        <span class="text-xs text-slate-400 self-center">or use a sample:</span>
+
+        @for (sample of samplePhotos; track sample.caption) {
+          <button
+            type="button"
+            (click)="addSamplePhoto(sample)"
+            class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            + {{ sample.caption.split(' ')[0] }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Interactive Fullscreen Photo Annotation Modal -->
+  @if (selectedPhoto(); as photo) {
+    <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div class="bg-white rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-4 py-3 bg-slate-900 text-white border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-orange-400 text-[20px] w-[20px] h-[20px]">pin_drop</mat-icon>
+            <div>
+              <h3 class="text-xs sm:text-sm font-bold">{{ photo.caption }}</h3>
+              <p class="text-[11px] text-slate-400">Click anywhere on the photo to drop measurement pins and condition notes.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <mat-icon class="text-[20px] w-[20px] h-[20px]">close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Image Canvas with Interactive Pins -->
+        <div class="relative bg-slate-900 flex-1 min-h-[350px] max-h-[550px] overflow-hidden flex items-center justify-center p-2">
+          <div
+            tabindex="0"
+            role="button"
+            (click)="onImageClick($event)"
+            (keyup.enter)="onImageClick($any($event))"
+            class="relative inline-block max-w-full max-h-full select-none cursor-crosshair focus:outline-hidden"
+          >
+            <img
+              #imageEl
+              [src]="photo.dataUrl"
+              [alt]="photo.caption"
+              class="max-w-full max-h-[480px] object-contain rounded-lg shadow-lg block pointer-events-none"
+              referrerpolicy="no-referrer"
+            />
+
+            <!-- Placed Pins on Image -->
+            @for (annot of photo.annotations; track annot.id; let idx = $index) {
+              <div
+                class="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                [style.left.%]="annot.x"
+                [style.top.%]="annot.y"
+              >
+                <!-- Pin Marker Badge -->
+                <div
+                  class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold shadow-lg ring-2 ring-white transition-transform group-hover:scale-125"
+                  [class.bg-orange-600]="annot.type === 'dimension'"
+                  [class.bg-rose-600]="annot.type === 'damage'"
+                  [class.bg-amber-600]="annot.type === 'electrical'"
+                  [class.bg-sky-600]="annot.type === 'plumbing'"
+                  [class.bg-slate-700]="annot.type === 'general'"
+                >
+                  {{ idx + 1 }}
+                </div>
+
+                <!-- Hover Callout Bubble -->
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900/95 text-white text-xs rounded-lg shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-orange-400">{{ annot.type }}</div>
+                  <div class="font-medium mt-0.5">{{ annot.text }}</div>
+                </div>
+              </div>
+            }
+
+            <!-- Pending Click Pin Pulse -->
+            @if (pendingClickPos(); as pos) {
+              <div
+                class="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                [style.left.%]="pos.x"
+                [style.top.%]="pos.y"
+              >
+                <span class="w-8 h-8 rounded-full bg-orange-500/40 animate-ping block absolute -inset-1"></span>
+                <div class="w-6 h-6 rounded-full bg-orange-600 border-2 border-white text-white text-xs flex items-center justify-center font-bold relative z-10 shadow-lg">
+                  +
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Annotation Input & Pin List Footer -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200">
+          @if (pendingClickPos()) {
+            <!-- New Pin Form -->
+            <div class="p-3 bg-white rounded-xl border border-orange-200 shadow-sm animate-in fade-in duration-150">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs font-bold text-orange-950 flex items-center gap-1">
+                  <mat-icon class="text-orange-600 text-[16px] w-[16px] h-[16px]">add_location</mat-icon>
+                  <span>New Pin at ({{ pendingClickPos()?.x }}%, {{ pendingClickPos()?.y }}%)</span>
+                </span>
+                
+                <!-- Pin Type Selector -->
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    (click)="newAnnotationType.set('dimension')"
+                    [class.bg-orange-600]="newAnnotationType() === 'dimension'"
+                    [class.text-white]="newAnnotationType() === 'dimension'"
+                    [class.bg-slate-100]="newAnnotationType() !== 'dimension'"
+                    class="px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Dimension
+                  </button>
+                  <button
+                    type="button"
+                    (click)="newAnnotationType.set('damage')"
+                    [class.bg-rose-600]="newAnnotationType() === 'damage'"
+                    [class.text-white]="newAnnotationType() === 'damage'"
+                    [class.bg-slate-100]="newAnnotationType() !== 'damage'"
+                    class="px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Condition/Issue
+                  </button>
+                  <button
+                    type="button"
+                    (click)="newAnnotationType.set('electrical')"
+                    [class.bg-amber-600]="newAnnotationType() === 'electrical'"
+                    [class.text-white]="newAnnotationType() === 'electrical'"
+                    [class.bg-slate-100]="newAnnotationType() !== 'electrical'"
+                    class="px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Electrical
+                  </button>
+                  <button
+                    type="button"
+                    (click)="newAnnotationType.set('plumbing')"
+                    [class.bg-sky-600]="newAnnotationType() === 'plumbing'"
+                    [class.text-white]="newAnnotationType() === 'plumbing'"
+                    [class.bg-slate-100]="newAnnotationType() !== 'plumbing'"
+                    class="px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Plumbing
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [(ngModel)]="newAnnotationText"
+                  placeholder="e.g. 84.5 inches clearance to ceiling beam / outlet behind sofa"
+                  (keyup.enter)="saveAnnotation()"
+                  class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+                />
+                <button
+                  type="button"
+                  (click)="saveAnnotation()"
+                  [disabled]="!newAnnotationText().trim()"
+                  class="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  Save Pin
+                </button>
+                <button
+                  type="button"
+                  (click)="pendingClickPos.set(null)"
+                  class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          } @else {
+            <!-- Annotation List Summary -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-slate-800">Pin List ({{ photo.annotations.length }})</h4>
+                <span class="text-[11px] text-slate-500">Tap anywhere on photo above to add another pin</span>
+              </div>
+
+              @if (photo.annotations.length > 0) {
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+                  @for (annot of photo.annotations; track annot.id; let idx = $index) {
+                    <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-200 text-xs">
+                      <div class="flex items-center gap-2 overflow-hidden">
+                        <span
+                          class="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                          [class.bg-orange-600]="annot.type === 'dimension'"
+                          [class.bg-rose-600]="annot.type === 'damage'"
+                          [class.bg-amber-600]="annot.type === 'electrical'"
+                          [class.bg-sky-600]="annot.type === 'plumbing'"
+                          [class.bg-slate-700]="annot.type === 'general'"
+                        >
+                          {{ idx + 1 }}
+                        </span>
+                        <span class="truncate font-medium text-slate-800">{{ annot.text }}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        (click)="deleteAnnotation(annot.id)"
+                        class="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                        title="Remove Pin"
+                      >
+                        <mat-icon class="text-[14px] w-[14px] h-[14px]">close</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="text-xs text-slate-500 italic">No callout pins placed yet. Tap any detail in the picture to tag a measurement or observation.</p>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

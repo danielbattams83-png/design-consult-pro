@@ -1,0 +1,1145 @@
+<div class="space-y-4 pb-12">
+  <!-- ============================================================== -->
+  <!-- 1. MOBILE HEADER CARD -->
+  <!-- ============================================================== -->
+  @if (activeProject(); as proj) {
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs transition-all">
+      <!-- Top Row: Status badge & Project Switcher / Quick Action Buttons -->
+      <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tracking-wide"
+            [class.bg-emerald-100]="proj.status === 'Signed' || proj.status === 'Completed'"
+            [class.text-emerald-800]="proj.status === 'Signed' || proj.status === 'Completed'"
+            [class.bg-orange-100]="proj.status === 'In Survey' || proj.status === 'Estimating'"
+            [class.text-orange-800]="proj.status === 'In Survey' || proj.status === 'Estimating'"
+            [class.bg-slate-100]="proj.status === 'Draft' || proj.status === 'Proposal Ready'"
+            [class.text-slate-800]="proj.status === 'Draft' || proj.status === 'Proposal Ready'"
+          >
+            <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="proj.status === 'Signed' || proj.status === 'Completed'" [class.bg-orange-500]="proj.status === 'In Survey' || proj.status === 'Estimating'" [class.bg-slate-400]="proj.status === 'Draft' || proj.status === 'Proposal Ready'"></span>
+            {{ proj.status }}
+          </span>
+
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+            {{ proj.projectType }}
+          </span>
+        </div>
+
+        <!-- Quick Touch Header Actions: Edit & Delete -->
+        <div class="flex items-center gap-1.5">
+          <!-- Edit Button -->
+          <button
+            type="button"
+            id="mobile-header-edit-btn"
+            (click)="openEditModal()"
+            class="min-h-[44px] min-w-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
+            title="Edit Project Details"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px] text-slate-700">edit</mat-icon>
+            <span class="hidden xs:inline">Edit</span>
+          </button>
+
+          <!-- Delete Button -->
+          <button
+            type="button"
+            id="mobile-header-delete-btn"
+            (click)="openDeleteModal()"
+            class="min-h-[44px] min-w-[44px] px-2.5 py-2 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
+            title="Delete Project"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px] text-rose-600">delete_outline</mat-icon>
+            <span class="hidden sm:inline">Delete</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Project Name, Client & Address -->
+      <div class="pt-3 space-y-2">
+        <div class="flex items-start justify-between gap-2">
+          <div class="space-y-0.5">
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 leading-snug tracking-tight">
+              {{ proj.name }}
+            </h1>
+            <div class="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+              <mat-icon class="text-[16px] w-[16px] h-[16px] text-orange-600">person</mat-icon>
+              <span>{{ proj.clientName }}</span>
+              @if (proj.clientPhone) {
+                <span class="text-slate-400">•</span>
+                <span class="font-mono-digits">{{ proj.clientPhone }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Address with location pin -->
+        <div class="flex items-center gap-1.5 text-xs text-slate-500 pt-0.5">
+          <mat-icon class="text-[16px] w-[16px] h-[16px] text-slate-400 shrink-0">location_on</mat-icon>
+          <span class="truncate">{{ proj.siteAddress }}</span>
+        </div>
+
+        <!-- Cadastral & Metric Tags -->
+        <div class="flex items-center gap-2 flex-wrap pt-1 text-[11px]">
+          @if (proj.lotNumber) {
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+              <span class="font-bold text-slate-500">Lot:</span> {{ proj.lotNumber }}
+            </span>
+          }
+          @if (proj.rpNumber) {
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+              <span class="font-bold text-slate-500">RP:</span> {{ proj.rpNumber }}
+            </span>
+          }
+          @if (proj.siteArea) {
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+              <mat-icon class="text-[13px] w-[13px] h-[13px] text-slate-400">aspect_ratio</mat-icon>
+              {{ proj.siteArea }}
+            </span>
+          }
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-medium font-mono-digits border border-emerald-200">
+            <mat-icon class="text-[13px] w-[13px] h-[13px] text-emerald-600">payments</mat-icon>
+            ${{ proj.targetBudget | number }}
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+            <mat-icon class="text-[13px] w-[13px] h-[13px] text-slate-400">meeting_room</mat-icon>
+            {{ proj.rooms.length }} {{ proj.rooms.length === 1 ? 'Room' : 'Rooms' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 2. HORIZONTALLY SCROLLABLE ACTION BAR -->
+  <!-- ============================================================== -->
+  <div class="relative -mx-3 px-3 sm:mx-0 sm:px-0">
+    <div
+      class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth"
+      role="tablist"
+      aria-label="Workspace Sections"
+    >
+      <!-- Pill 1: Recording -->
+      <button
+        type="button"
+        id="action-pill-recording"
+        (click)="selectSubTab('recording')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'recording'"
+        [class.text-white]="activeSubTab() === 'recording'"
+        [class.border-slate-900]="activeSubTab() === 'recording'"
+        [class.shadow-sm]="activeSubTab() === 'recording'"
+        [class.bg-white]="activeSubTab() !== 'recording'"
+        [class.text-slate-700]="activeSubTab() !== 'recording'"
+        [class.border-slate-200]="activeSubTab() !== 'recording'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'recording'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'recording'">mic</mat-icon>
+        <span>Recording</span>
+      </button>
+
+      <!-- Pill 2: Floorplan -->
+      <button
+        type="button"
+        id="action-pill-floorplan"
+        (click)="selectSubTab('floorplan')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'floorplan'"
+        [class.text-white]="activeSubTab() === 'floorplan'"
+        [class.border-slate-900]="activeSubTab() === 'floorplan'"
+        [class.shadow-sm]="activeSubTab() === 'floorplan'"
+        [class.bg-white]="activeSubTab() !== 'floorplan'"
+        [class.text-slate-700]="activeSubTab() !== 'floorplan'"
+        [class.border-slate-200]="activeSubTab() !== 'floorplan'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'floorplan'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'floorplan'">straighten</mat-icon>
+        <span>Floorplan</span>
+      </button>
+
+      <!-- Pill 3: Photos -->
+      <button
+        type="button"
+        id="action-pill-photos"
+        (click)="selectSubTab('photos')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'photos'"
+        [class.text-white]="activeSubTab() === 'photos'"
+        [class.border-slate-900]="activeSubTab() === 'photos'"
+        [class.shadow-sm]="activeSubTab() === 'photos'"
+        [class.bg-white]="activeSubTab() !== 'photos'"
+        [class.text-slate-700]="activeSubTab() !== 'photos'"
+        [class.border-slate-200]="activeSubTab() !== 'photos'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'photos'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'photos'">photo_camera</mat-icon>
+        <span>Photos</span>
+        @if (activeRoom()?.photos?.length) {
+          <span class="px-1.5 py-0.2 rounded-full text-[10px]" [class.bg-orange-500]="activeSubTab() === 'photos'" [class.text-white]="activeSubTab() === 'photos'" [class.bg-slate-100]="activeSubTab() !== 'photos'" [class.text-slate-700]="activeSubTab() !== 'photos'">
+            {{ activeRoom()?.photos?.length }}
+          </span>
+        }
+      </button>
+
+      <!-- Pill 4: Actions -->
+      <button
+        type="button"
+        id="action-pill-actions"
+        (click)="selectSubTab('actions')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'actions'"
+        [class.text-white]="activeSubTab() === 'actions'"
+        [class.border-slate-900]="activeSubTab() === 'actions'"
+        [class.shadow-sm]="activeSubTab() === 'actions'"
+        [class.bg-white]="activeSubTab() !== 'actions'"
+        [class.text-slate-700]="activeSubTab() !== 'actions'"
+        [class.border-slate-200]="activeSubTab() !== 'actions'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'actions'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'actions'">checklist</mat-icon>
+        <span>Actions</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" [class.bg-orange-500]="activeSubTab() === 'actions'" [class.text-white]="activeSubTab() === 'actions'" [class.bg-slate-100]="activeSubTab() !== 'actions'" [class.text-slate-700]="activeSubTab() !== 'actions'">
+          {{ actionItems().length }}
+        </span>
+      </button>
+
+      <!-- Pill 5: AI Analysis -->
+      <button
+        type="button"
+        id="action-pill-ai"
+        (click)="selectSubTab('ai')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'ai'"
+        [class.text-white]="activeSubTab() === 'ai'"
+        [class.border-slate-900]="activeSubTab() === 'ai'"
+        [class.shadow-sm]="activeSubTab() === 'ai'"
+        [class.bg-white]="activeSubTab() !== 'ai'"
+        [class.text-slate-700]="activeSubTab() !== 'ai'"
+        [class.border-slate-200]="activeSubTab() !== 'ai'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'ai'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'ai'">auto_awesome</mat-icon>
+        <span>AI Analysis</span>
+      </button>
+
+      <!-- Pill 6: Report -->
+      <button
+        type="button"
+        id="action-pill-report"
+        (click)="selectSubTab('report')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'report'"
+        [class.text-white]="activeSubTab() === 'report'"
+        [class.border-slate-900]="activeSubTab() === 'report'"
+        [class.shadow-sm]="activeSubTab() === 'report'"
+        [class.bg-white]="activeSubTab() !== 'report'"
+        [class.text-slate-700]="activeSubTab() !== 'report'"
+        [class.border-slate-200]="activeSubTab() !== 'report'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'report'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'report'">picture_as_pdf</mat-icon>
+        <span>Report</span>
+      </button>
+
+      <!-- Pill 7: Proposal -->
+      <button
+        type="button"
+        id="action-pill-proposal"
+        (click)="selectSubTab('proposal')"
+        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
+        [class.bg-slate-900]="activeSubTab() === 'proposal'"
+        [class.text-white]="activeSubTab() === 'proposal'"
+        [class.border-slate-900]="activeSubTab() === 'proposal'"
+        [class.shadow-sm]="activeSubTab() === 'proposal'"
+        [class.bg-white]="activeSubTab() !== 'proposal'"
+        [class.text-slate-700]="activeSubTab() !== 'proposal'"
+        [class.border-slate-200]="activeSubTab() !== 'proposal'"
+        [class.hover:bg-slate-50]="activeSubTab() !== 'proposal'"
+      >
+        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'proposal'">request_quote</mat-icon>
+        <span>Proposal</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- 3. PROPERTY QUICK-ACTIONS (Full-Width Mobile Buttons) -->
+  <!-- ============================================================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <!-- Quick-Action 1: Fetch from Address -->
+    <button
+      type="button"
+      id="quick-action-fetch-address"
+      (click)="fetchFromAddress()"
+      [disabled]="isFetchingAddress()"
+      class="w-full min-h-[48px] px-4 py-3 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold text-xs rounded-2xl shadow-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60"
+    >
+      @if (isFetchingAddress()) {
+        <mat-icon class="text-[20px] w-[20px] h-[20px] animate-spin text-orange-400">autorenew</mat-icon>
+        <span>Fetching Cadastral & Zoning Data...</span>
+      } @else {
+        <mat-icon class="text-[20px] w-[20px] h-[20px] text-orange-400">travel_explore</mat-icon>
+        <span>Fetch from Address</span>
+      }
+    </button>
+
+    <!-- Quick-Action 2: Extract from Photos (OCR) -->
+    <button
+      type="button"
+      id="quick-action-extract-ocr"
+      (click)="triggerOcrUpload()"
+      [disabled]="isOcrExtracting()"
+      class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white font-bold text-xs rounded-2xl shadow-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60"
+    >
+      @if (isOcrExtracting()) {
+        <mat-icon class="text-[20px] w-[20px] h-[20px] animate-spin">autorenew</mat-icon>
+        <span>Extracting OCR Specs...</span>
+      } @else {
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">document_scanner</mat-icon>
+        <span>Extract from Photos (OCR)</span>
+      }
+    </button>
+  </div>
+
+  <!-- Hidden File Input for OCR Scan -->
+  <input
+    #ocrFileInput
+    type="file"
+    accept="image/*"
+    capture="environment"
+    (change)="onOcrFileSelected($event)"
+    class="hidden"
+  />
+
+  <!-- Hidden File Input for Photo Upload -->
+  <input
+    #photoUploadInput
+    type="file"
+    accept="image/*"
+    capture="environment"
+    (change)="onPhotoSelected($event)"
+    class="hidden"
+  />
+
+  <!-- ============================================================== -->
+  <!-- 4. SUB-TAB CONTENT: RECORDING (Mobile Audio Recorder & AI Summary) -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'recording') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <!-- 4A. Mobile Audio Recorder Component Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5 text-center">
+        <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-left">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">mic</mat-icon>
+            </div>
+            <div>
+              <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Mobile On-Site Voice Recorder</h2>
+              <p class="text-[11px] text-slate-500">Dictate walkthrough notes with automatic AI transcription.</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" [class.bg-rose-100]="isRecording()" [class.text-rose-800]="isRecording()" [class.bg-slate-100]="!isRecording()" [class.text-slate-600]="!isRecording()">
+            {{ isRecording() ? 'LIVE RECORDING' : 'READY' }}
+          </span>
+        </div>
+
+        <!-- Large Digital Timer -->
+        <div class="py-2 space-y-1">
+          <div class="flex items-center justify-center gap-2">
+            @if (isRecording()) {
+              <span class="w-3 h-3 rounded-full bg-rose-600 animate-ping"></span>
+            }
+            <div class="text-4xl sm:text-5xl font-mono-digits font-black text-slate-900 tracking-tight">
+              {{ formatTimer(recordingSeconds()) }}
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium">
+            {{ isRecording() ? 'Speaking into microphone... Tap button to finish' : 'Tap the microphone below to start dictating' }}
+          </p>
+        </div>
+
+        <!-- Simulated Visualizer Bars during recording -->
+        @if (isRecording()) {
+          <div class="flex items-center justify-center gap-1 h-6">
+            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.3"></span>
+            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.5"></span>
+            <span class="w-1 rounded-full bg-orange-600 transition-all duration-150" [style.height.px]="audioLevel() * 0.7"></span>
+            <span class="w-1 rounded-full bg-rose-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.4"></span>
+            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.6"></span>
+          </div>
+        }
+
+        <!-- Giant Circular Microphone Recording Button -->
+        <div class="flex flex-col items-center justify-center py-2">
+          <div class="relative">
+            <!-- Animated ripple ring when recording -->
+            @if (isRecording()) {
+              <div class="absolute -inset-3 rounded-full bg-rose-500/20 animate-ping"></div>
+              <div class="absolute -inset-6 rounded-full bg-orange-500/15 animate-pulse"></div>
+            }
+
+            <button
+              type="button"
+              id="giant-mic-record-btn"
+              (click)="toggleRecording()"
+              class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center shadow-xl transition-all cursor-pointer active:scale-95 select-none focus:outline-hidden"
+              [class.bg-rose-600]="isRecording()"
+              [class.hover:bg-rose-700]="isRecording()"
+              [class.bg-orange-600]="!isRecording()"
+              [class.hover:bg-orange-700]="!isRecording()"
+              [attr.aria-label]="isRecording() ? 'Stop Recording' : 'Start Voice Recording'"
+            >
+              @if (isRecording()) {
+                <mat-icon class="text-[36px] w-[36px] h-[36px] text-white">stop</mat-icon>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-white mt-1">STOP</span>
+              } @else {
+                <mat-icon class="text-[36px] w-[36px] h-[36px] text-white">mic</mat-icon>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-white mt-1">RECORD</span>
+              }
+            </button>
+          </div>
+        </div>
+
+        <!-- Recorded Voice Memos Stream -->
+        @if (activeRoom()?.audioNotes?.length) {
+          <div class="pt-3 border-t border-slate-100 text-left space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span>Recorded Memos ({{ activeRoom()?.audioNotes?.length }})</span>
+              <span class="text-[10px] text-slate-400 font-normal">Active Zone: {{ activeRoom()?.name }}</span>
+            </div>
+
+            <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+              @for (note of activeRoom()?.audioNotes; track note.id) {
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 font-bold text-slate-900">
+                      <mat-icon class="text-orange-600 text-[16px] w-[16px] h-[16px]">graphic_eq</mat-icon>
+                      <span>{{ note.title }}</span>
+                      <span class="text-[10px] font-mono-digits font-normal text-slate-400">({{ note.durationSeconds }}s)</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <span class="text-[10px] text-slate-400">{{ note.recordedAt | date:'shortTime' }}</span>
+                      <button
+                        type="button"
+                        (click)="deleteAudioNote(note.id)"
+                        class="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Delete memo"
+                      >
+                        <mat-icon class="text-[16px] w-[16px] h-[16px]">delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (note.audioBlobUrl) {
+                    <audio [src]="note.audioBlobUrl" controls class="w-full h-7 rounded"></audio>
+                  }
+
+                  <div class="p-2 bg-white rounded-lg border border-slate-200/80 text-[11px] text-slate-700 leading-relaxed">
+                    <span class="text-[10px] font-bold text-orange-600 uppercase tracking-wider block mb-0.5">AI Transcript:</span>
+                    <p class="italic text-slate-800">{{ note.transcription }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- 4B. AI Meeting Summary Text Box Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">AI Consultation Meeting Summary</h3>
+              <p class="text-[11px] text-slate-500">Synthesizes voice memos, room schedules, and client directives.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="copySummaryToClipboard()"
+            class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+            title="Copy to clipboard"
+          >
+            <mat-icon class="text-[14px] w-[14px] h-[14px]">
+              {{ isSummaryCopied() ? 'check' : 'content_copy' }}
+            </mat-icon>
+            <span>{{ isSummaryCopied() ? 'Copied' : 'Copy' }}</span>
+          </button>
+        </div>
+
+        <!-- Summary Text Box -->
+        <div>
+          <textarea
+            id="meeting-summary-textbox"
+            [ngModel]="meetingSummaryText()"
+            (ngModelChange)="meetingSummaryText.set($event)"
+            rows="7"
+            placeholder="AI meeting summary will appear here after recording or manual briefing..."
+            class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 leading-relaxed font-sans focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Full-Width 'Generate with AI' Button -->
+        <button
+          type="button"
+          id="btn-generate-ai-meeting-summary"
+          (click)="generateAiMeetingSummary()"
+          [disabled]="isGeneratingSummary()"
+          class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+        >
+          @if (isGeneratingSummary()) {
+            <mat-icon class="text-[20px] w-[20px] h-[20px] animate-spin">autorenew</mat-icon>
+            <span>Synthesizing Client Consultation with Gemini...</span>
+          } @else {
+            <mat-icon class="text-[20px] w-[20px] h-[20px]">auto_awesome</mat-icon>
+            <span>Generate with AI</span>
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 5. SUB-TAB CONTENT: FLOORPLAN -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'floorplan') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Room Schedules & Dimensions</h3>
+            <p class="text-[11px] text-slate-500">Active Zone: {{ activeRoom()?.name }} ({{ projectTotals().totalFloorArea }} {{ projectTotals().unitStr }} Total)</p>
+          </div>
+          <button
+            type="button"
+            (click)="navigateTo('measure')"
+            class="min-h-[40px] px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <mat-icon class="text-[16px] w-[16px] h-[16px]">edit_square</mat-icon>
+            <span>Open 2D CAD Tool</span>
+          </button>
+        </div>
+
+        <!-- Room Selector Dropdown / Pills -->
+        @if (activeProject(); as proj) {
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+            @for (room of proj.rooms; track room.id) {
+              <button
+                type="button"
+                (click)="store.setActiveRoom(room.id)"
+                class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border"
+                [class.bg-slate-900]="room.id === activeRoom()?.id"
+                [class.text-white]="room.id === activeRoom()?.id"
+                [class.border-slate-900]="room.id === activeRoom()?.id"
+                [class.bg-slate-50]="room.id !== activeRoom()?.id"
+                [class.text-slate-700]="room.id !== activeRoom()?.id"
+                [class.border-slate-200]="room.id !== activeRoom()?.id"
+              >
+                {{ room.name }} ({{ room.dimensions.calculatedFloorArea }} {{ proj.rooms[0]?.dimensions?.unit === 'metric' ? 'm²' : 'sqft' }})
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Active Room Dimensions Metrics Grid -->
+        @if (activeRoom(); as r) {
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Floor Area</span>
+              <span class="text-base font-bold font-mono-digits text-slate-900">{{ r.dimensions.calculatedFloorArea }}</span>
+              <span class="text-[10px] text-slate-500 ml-1">{{ r.dimensions.unit === 'metric' ? 'm²' : 'sq ft' }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Ceiling Height</span>
+              <span class="text-base font-bold font-mono-digits text-slate-900">{{ r.dimensions.ceilingHeightFt }}</span>
+              <span class="text-[10px] text-slate-500 ml-1">{{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Perimeter</span>
+              <span class="text-base font-bold font-mono-digits text-slate-900">{{ r.dimensions.calculatedPerimeter }}</span>
+              <span class="text-[10px] text-slate-500 ml-1">{{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Squareness Check</span>
+              <span class="text-xs font-bold" [class.text-emerald-700]="r.dimensions.isSquare" [class.text-amber-700]="!r.dimensions.isSquare">
+                {{ r.dimensions.isSquare ? 'True 90° Square' : 'Out-of-Square (' + (r.dimensions.diagonalDifferenceInches || 0) + '")' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Wall Schedule Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                  <th class="p-2.5 font-bold">Wall Name</th>
+                  <th class="p-2.5 font-bold">Orientation</th>
+                  <th class="p-2.5 font-bold font-mono-digits">Length</th>
+                  <th class="p-2.5 font-bold font-mono-digits">Height</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (wall of r.dimensions.walls; track wall.id) {
+                  <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-medium text-slate-900">{{ wall.name }}</td>
+                    <td class="p-2.5 text-slate-600">{{ wall.orientation }}</td>
+                    <td class="p-2.5 font-bold font-mono-digits text-slate-900">{{ wall.lengthFt }} {{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</td>
+                    <td class="p-2.5 font-mono-digits text-slate-700">{{ wall.heightFt }} {{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 6. SUB-TAB CONTENT: PHOTOS -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'photos') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Site Walkthrough Photos</h3>
+            <p class="text-[11px] text-slate-500">Capture visual evidence and inspect existing conditions.</p>
+          </div>
+          <button
+            type="button"
+            (click)="triggerPhotoUpload()"
+            class="min-h-[40px] px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <mat-icon class="text-[16px] w-[16px] h-[16px]">add_a_photo</mat-icon>
+            <span>Add Photo</span>
+          </button>
+        </div>
+
+        @if (activeRoom()?.photos?.length) {
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @for (photo of activeRoom()?.photos; track photo.id) {
+              <div class="group relative bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-4/3">
+                <img [src]="photo.dataUrl" [alt]="photo.caption" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px]">
+                  <p class="font-bold truncate">{{ photo.caption }}</p>
+                  <p class="text-white/70 text-[9px]">{{ photo.takenAt | date:'shortTime' }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="py-8 text-center border-2 border-dashed border-slate-200 rounded-xl p-4 space-y-2">
+            <mat-icon class="text-slate-300 text-[36px] w-[36px] h-[36px]">photo_camera</mat-icon>
+            <p class="text-xs text-slate-500 font-medium">No photos captured for this room yet.</p>
+            <button
+              type="button"
+              (click)="triggerPhotoUpload()"
+              class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            >
+              Take First Photo
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 7. SUB-TAB CONTENT: ACTIONS / PUNCH LIST -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'actions') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Field Action Items & Punch List</h3>
+            <p class="text-[11px] text-slate-500">Track tasks for contractor bidding, permit review, and CAD drafting.</p>
+          </div>
+        </div>
+
+        <!-- Add Action Input -->
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            [ngModel]="newActionText()"
+            (ngModelChange)="newActionText.set($event)"
+            (keyup.enter)="addActionItem()"
+            placeholder="Add new action item on-site..."
+            class="flex-1 min-h-[44px] px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+          />
+          <div class="flex gap-2">
+            <select
+              [ngModel]="newActionCategory()"
+              (ngModelChange)="newActionCategory.set($event)"
+              class="min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+            >
+              <option value="Measurement">Measurement</option>
+              <option value="Contractor">Contractor</option>
+              <option value="Design">Design</option>
+              <option value="Permit">Permit</option>
+            </select>
+            <button
+              type="button"
+              (click)="addActionItem()"
+              class="min-h-[44px] px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Actions List -->
+        <div class="space-y-2">
+          @for (item of actionItems(); track item.id) {
+            <div
+              class="p-3 rounded-xl border flex items-start justify-between gap-3 transition-colors text-xs"
+              [class.bg-slate-50]="item.completed"
+              [class.border-slate-200]="item.completed"
+              [class.bg-white]="!item.completed"
+              [class.border-slate-200]="!item.completed"
+            >
+              <div class="flex items-start gap-2.5 flex-1">
+                <input
+                  type="checkbox"
+                  [checked]="item.completed"
+                  (change)="toggleAction(item.id)"
+                  class="w-4 h-4 mt-0.5 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                />
+                <div class="space-y-0.5">
+                  <p class="font-medium" [class.line-through]="item.completed" [class.text-slate-400]="item.completed" [class.text-slate-900]="!item.completed">
+                    {{ item.text }}
+                  </p>
+                  <div class="flex items-center gap-1.5 text-[10px]">
+                    <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">{{ item.category }}</span>
+                    @if (item.priority === 'high') {
+                      <span class="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">High Priority</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="deleteActionItem(item.id)"
+                class="text-slate-300 hover:text-rose-600 p-1 cursor-pointer"
+              >
+                <mat-icon class="text-[16px] w-[16px] h-[16px]">close</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 8. SUB-TAB CONTENT: AI ANALYSIS -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'ai') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">AI Concept & Architectural Brief</h3>
+            <p class="text-[11px] text-slate-500">Material takeoffs and contractor risk analysis generated via Gemini.</p>
+          </div>
+          <button
+            type="button"
+            (click)="navigateTo('ai')"
+            class="min-h-[40px] px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <mat-icon class="text-[16px] w-[16px] h-[16px]">auto_awesome</mat-icon>
+            <span>Full AI Proposal View</span>
+          </button>
+        </div>
+
+        @if (activeProject()?.aiProposal; as proposal) {
+          <div class="space-y-3">
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1 text-xs">
+              <h4 class="font-bold text-slate-900">Executive Concept</h4>
+              <p class="text-slate-700 leading-relaxed">{{ proposal.executiveSummary }}</p>
+            </div>
+
+            <!-- Swatches preview -->
+            @if (proposal.paletteSuggestions.length) {
+              <div>
+                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Palette Suggestions</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  @for (swatch of proposal.paletteSuggestions; track swatch.name) {
+                    <div class="p-2.5 rounded-xl border border-slate-200 flex items-center gap-2 bg-white">
+                      <div class="w-7 h-7 rounded-lg border border-black/10 shrink-0" [style.backgroundColor]="swatch.hex"></div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-bold text-slate-900 truncate">{{ swatch.name }}</p>
+                        <p class="text-[10px] text-slate-500 truncate">{{ swatch.role }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="py-6 text-center space-y-2">
+            <p class="text-xs text-slate-500">No AI brief generated yet for this project.</p>
+            <button
+              type="button"
+              (click)="navigateTo('ai')"
+              class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+            >
+              Generate AI Proposal
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- 9. SUB-TAB CONTENT: REPORT & PROPOSAL JUMPS -->
+  <!-- ============================================================== -->
+  @if (activeSubTab() === 'report') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs text-center space-y-3">
+        <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto">
+          <mat-icon class="text-[28px] w-[28px] h-[28px]">picture_as_pdf</mat-icon>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900">Client Sign-Off &amp; Exportable PDF Report</h3>
+        <p class="text-xs text-slate-500 max-w-md mx-auto">
+          Review on-site measurements, signature block, material schedules, and export client-ready documentation.
+        </p>
+        <button
+          type="button"
+          (click)="navigateTo('report')"
+          class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
+        >
+          Open Client Report &amp; Sign-Off View
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (activeSubTab() === 'proposal') {
+    <div class="space-y-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs text-center space-y-3">
+        <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto">
+          <mat-icon class="text-[28px] w-[28px] h-[28px]">request_quote</mat-icon>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900">Material Takeoffs &amp; Proposal Estimates</h3>
+        <p class="text-xs text-slate-500 max-w-md mx-auto">
+          View auto-calculated square footage, flooring quantities, paint gallons, and trade allowances.
+        </p>
+        <button
+          type="button"
+          (click)="navigateTo('ai')"
+          class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
+        >
+          View Itemized Material Takeoffs
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Edit Project Details -->
+  <!-- ============================================================== -->
+  @if (isEditModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-orange-600">edit_note</mat-icon>
+            <h2 class="text-sm font-bold text-slate-900">Edit Project Details</h2>
+          </div>
+          <button
+            type="button"
+            (click)="isEditModalOpen.set(false)"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="editForm" (ngSubmit)="saveProjectEdits()" class="space-y-3 text-xs">
+          <div>
+            <label for="edit-proj-name" class="font-bold text-slate-700 block mb-1">Project Name</label>
+            <input
+              id="edit-proj-name"
+              type="text"
+              formControlName="name"
+              class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label for="edit-client-name" class="font-bold text-slate-700 block mb-1">Client Name</label>
+              <input
+                id="edit-client-name"
+                type="text"
+                formControlName="clientName"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label for="edit-client-phone" class="font-bold text-slate-700 block mb-1">Phone Number</label>
+              <input
+                id="edit-client-phone"
+                type="tel"
+                formControlName="clientPhone"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="edit-site-address" class="font-bold text-slate-700 block mb-1">Site Street Address</label>
+            <input
+              id="edit-site-address"
+              type="text"
+              formControlName="siteAddress"
+              class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="edit-lot-num" class="font-bold text-slate-700 block mb-1">Lot Number</label>
+              <input
+                id="edit-lot-num"
+                type="text"
+                formControlName="lotNumber"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label for="edit-rp-num" class="font-bold text-slate-700 block mb-1">RP Number</label>
+              <input
+                id="edit-rp-num"
+                type="text"
+                formControlName="rpNumber"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="edit-target-budget" class="font-bold text-slate-700 block mb-1">Target Budget ($)</label>
+              <input
+                id="edit-target-budget"
+                type="number"
+                formControlName="targetBudget"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden font-mono-digits"
+              />
+            </div>
+            <div>
+              <label for="edit-survey-date" class="font-bold text-slate-700 block mb-1">Survey Date</label>
+              <input
+                id="edit-survey-date"
+                type="date"
+                formControlName="surveyDate"
+                class="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div class="pt-3 flex gap-2">
+            <button
+              type="button"
+              (click)="isEditModalOpen.set(false)"
+              class="flex-1 min-h-[48px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 min-h-[48px] bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-md cursor-pointer"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Delete Project Confirmation -->
+  <!-- ============================================================== -->
+  @if (isDeleteModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 text-center">
+        <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+          <mat-icon class="text-[28px] w-[28px] h-[28px]">warning</mat-icon>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Delete Project?</h3>
+          <p class="text-xs text-slate-500 mt-1">
+            Are you sure you want to delete <span class="font-bold text-slate-800">{{ activeProject()?.name }}</span>? This cannot be undone.
+          </p>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button
+            type="button"
+            (click)="isDeleteModalOpen.set(false)"
+            class="flex-1 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            (click)="confirmDeleteProject()"
+            class="flex-1 min-h-[44px] bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+          >
+            Yes, Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Property Address Fetch (Cadastral Enrichment) -->
+  <!-- ============================================================== -->
+  @if (isAddressModalOpen() && addressDetails(); as details) {
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+      <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-orange-600">travel_explore</mat-icon>
+            <h2 class="text-sm font-bold text-slate-900">Cadastral &amp; Property Enrichment</h2>
+          </div>
+          <button
+            type="button"
+            (click)="isAddressModalOpen.set(false)"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">close</mat-icon>
+          </button>
+        </div>
+
+        <div class="space-y-2.5">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-bold uppercase text-[10px]">Cadastral Lot</span>
+              <span class="font-bold text-slate-900">{{ details.lotNumber || 'Lot 148' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-bold uppercase text-[10px]">RP / Plan #</span>
+              <span class="font-bold text-slate-900">{{ details.rpNumber || 'RP849201' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-bold uppercase text-[10px]">Site Parcel Area</span>
+              <span class="font-bold text-slate-900">{{ details.siteArea || '785 m²' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-bold uppercase text-[10px]">Council Zoning</span>
+              <span class="font-bold text-orange-800">{{ details.councilZoning || 'Low-Density Residential' }}</span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+            <span class="text-slate-500 font-bold uppercase text-[10px] block">Solar &amp; Climate Exposure</span>
+            <p class="text-slate-800 leading-relaxed">{{ details.solarOrientation }}</p>
+            <p class="text-slate-600 text-[11px]">Climate Zone: <span class="font-bold text-slate-800">{{ details.climateZone }}</span></p>
+          </div>
+
+          @if (details.easements) {
+            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px]">
+              <span class="font-bold">Easement / Buffer:</span> {{ details.easements }}
+            </div>
+          }
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button
+            type="button"
+            (click)="isAddressModalOpen.set(false)"
+            class="flex-1 min-h-[48px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+          >
+            Dismiss
+          </button>
+          <button
+            type="button"
+            (click)="applyAddressDetailsToProject()"
+            class="flex-1 min-h-[48px] bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md cursor-pointer"
+          >
+            Apply to Project
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Photo OCR Extraction Result -->
+  <!-- ============================================================== -->
+  @if (isOcrModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+      <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-orange-600">document_scanner</mat-icon>
+            <h2 class="text-sm font-bold text-slate-900">Photo OCR Spec Extraction</h2>
+          </div>
+          <button
+            type="button"
+            (click)="isOcrModalOpen.set(false)"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">close</mat-icon>
+          </button>
+        </div>
+
+        @if (ocrImagePreview(); as img) {
+          <div class="w-full h-32 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+            <img [src]="img" alt="OCR Scan Preview" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+          </div>
+        }
+
+        @if (isOcrExtracting()) {
+          <div class="py-8 text-center space-y-2">
+            <mat-icon class="text-orange-600 text-[32px] w-[32px] h-[32px] animate-spin mx-auto">autorenew</mat-icon>
+            <p class="font-bold text-slate-800">Reading architectural callouts &amp; dimensions...</p>
+          </div>
+        } @else {
+          <div class="space-y-2">
+            <div class="flex flex-wrap gap-1.5">
+              @for (tag of ocrTags(); track tag) {
+                <span class="px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 font-bold text-[10px]">
+                  {{ tag }}
+                </span>
+              }
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <pre class="font-sans text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">{{ ocrExtractedResult() }}</pre>
+            </div>
+          </div>
+        }
+
+        <div class="pt-2 flex gap-2">
+          <button
+            type="button"
+            (click)="isOcrModalOpen.set(false)"
+            class="flex-1 min-h-[48px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            [disabled]="isOcrExtracting()"
+            (click)="appendOcrToMeetingSummary()"
+            class="flex-1 min-h-[48px] bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+          >
+            Insert into Summary
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

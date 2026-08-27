@@ -1,0 +1,224 @@
+@if (!isAuthenticated()) {
+  <!-- Full Screen Mobile-First Login View -->
+  <app-login></app-login>
+} @else {
+  <!-- Main Authenticated Field PWA Shell -->
+  <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased font-sans pb-20 md:pb-0">
+    <!-- Application Header & Top Navigation -->
+    <app-header></app-header>
+
+    <!-- Main View Container (Single Column Mobile-First Responsive) -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
+      @switch (activeTab()) {
+        @case ('workspace') {
+          <app-project-workspace></app-project-workspace>
+        }
+        @case ('dashboard') {
+          <app-dashboard></app-dashboard>
+        }
+        @case ('measure') {
+          <app-measure-view></app-measure-view>
+        }
+        @case ('survey') {
+          <app-survey-view></app-survey-view>
+        }
+        @case ('conditions') {
+          <app-conditions-view></app-conditions-view>
+        }
+        @case ('media') {
+          <app-media-view></app-media-view>
+        }
+        @case ('ai') {
+          <app-ai-proposal-view></app-ai-proposal-view>
+        }
+        @case ('report') {
+          <app-report-view></app-report-view>
+        }
+        @default {
+          <app-dashboard></app-dashboard>
+        }
+      }
+    </main>
+
+    <!-- Footer status bar (Desktop / Tablet view) -->
+    <footer class="no-print hidden sm:flex h-12 bg-slate-100 border-t border-slate-200 px-4 sm:px-8 items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        <span class="text-slate-800 font-bold">Design Consult Pro</span>
+        <span class="text-slate-400">| Field Survey &amp; 2D CAD Tool</span>
+      </div>
+      <div class="flex items-center gap-4 text-[10px] text-slate-400">
+        <span class="font-mono-digits">Local Cache: Active (Offline Ready)</span>
+        <span class="hidden md:inline font-mono-digits">PWA v2.4</span>
+      </div>
+    </footer>
+
+    <!-- ============================================================== -->
+    <!-- STICKY BOTTOM MOBILE NAVIGATION BAR -->
+    <!-- ============================================================== -->
+    <nav class="no-print fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-1.5 text-white shadow-2xl flex items-center justify-around md:hidden">
+      <!-- Tab 1: Home (Dashboard) -->
+      <button
+        type="button"
+        id="mobile-bottom-tab-home"
+        (click)="setTab('dashboard')"
+        class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+        [class.text-orange-400]="activeTab() === 'dashboard'"
+        [class.font-bold]="activeTab() === 'dashboard'"
+        [class.text-slate-400]="activeTab() !== 'dashboard'"
+      >
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">dashboard</mat-icon>
+        <span class="text-[10px]">Home</span>
+      </button>
+
+      <!-- Tab 2: Workspace -->
+      <button
+        type="button"
+        id="mobile-bottom-tab-workspace"
+        (click)="setTab('workspace')"
+        class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+        [class.text-orange-400]="activeTab() === 'workspace'"
+        [class.font-bold]="activeTab() === 'workspace'"
+        [class.text-slate-400]="activeTab() !== 'workspace'"
+      >
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">space_dashboard</mat-icon>
+        <span class="text-[10px]">Workspace</span>
+      </button>
+
+      <!-- Tab 3: Surveys -->
+      <button
+        type="button"
+        id="mobile-bottom-tab-surveys"
+        (click)="setTab('survey')"
+        class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+        [class.text-orange-400]="activeTab() === 'survey'"
+        [class.font-bold]="activeTab() === 'survey'"
+        [class.text-slate-400]="activeTab() !== 'survey'"
+      >
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">assignment</mat-icon>
+        <span class="text-[10px]">Surveys</span>
+      </button>
+
+      <!-- Tab 4: Measure (2D CAD & Laser) -->
+      <button
+        type="button"
+        id="mobile-bottom-tab-measure"
+        (click)="setTab('measure')"
+        class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+        [class.text-orange-400]="activeTab() === 'measure'"
+        [class.font-bold]="activeTab() === 'measure'"
+        [class.text-slate-400]="activeTab() !== 'measure'"
+      >
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">straighten</mat-icon>
+        <span class="text-[10px]">Measure</span>
+      </button>
+
+      <!-- Tab 5: Settings -->
+      <button
+        type="button"
+        id="mobile-bottom-tab-settings"
+        (click)="toggleGlobalSettings()"
+        class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">settings</mat-icon>
+        <span class="text-[10px]">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Global Mobile Settings Modal -->
+    @if (isGlobalSettingsOpen()) {
+      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+              <mat-icon class="text-slate-800">settings</mat-icon>
+              <h2 class="text-sm font-bold text-slate-900">App Preferences &amp; Field Storage</h2>
+            </div>
+            <button
+              type="button"
+              (click)="isGlobalSettingsOpen.set(false)"
+              class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">close</mat-icon>
+            </button>
+          </div>
+
+          <!-- User Profile Info -->
+          @if (auth.currentUser(); as user) {
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+                {{ user.name.charAt(0) || 'S' }}
+              </div>
+              <div class="min-w-0">
+                <div class="font-bold text-slate-900 truncate">{{ user.name }}</div>
+                <div class="text-[10px] text-slate-500 truncate">{{ user.email }}</div>
+                <div class="text-[10px] text-orange-600 font-semibold">{{ user.role }}</div>
+              </div>
+            </div>
+          }
+
+          <!-- Measurement Units Toggle -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <span class="font-bold text-slate-900 block">Measurement System</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                (click)="store.setUnit('imperial')"
+                class="min-h-[44px] rounded-lg font-bold border transition-all cursor-pointer"
+                [class.bg-orange-600]="store.unit() === 'imperial'"
+                [class.text-white]="store.unit() === 'imperial'"
+                [class.border-orange-600]="store.unit() === 'imperial'"
+                [class.bg-white]="store.unit() !== 'imperial'"
+                [class.text-slate-700]="store.unit() !== 'imperial'"
+              >
+                Imperial (ft / in / sq ft)
+              </button>
+              <button
+                type="button"
+                (click)="store.setUnit('metric')"
+                class="min-h-[44px] rounded-lg font-bold border transition-all cursor-pointer"
+                [class.bg-orange-600]="store.unit() === 'metric'"
+                [class.text-white]="store.unit() === 'metric'"
+                [class.border-orange-600]="store.unit() === 'metric'"
+                [class.bg-white]="store.unit() !== 'metric'"
+                [class.text-slate-700]="store.unit() !== 'metric'"
+              >
+                Metric (m / mm / m²)
+              </button>
+            </div>
+          </div>
+
+          <!-- Local Cache Actions -->
+          <div class="space-y-2 pt-1">
+            <button
+              type="button"
+              (click)="exportData()"
+              class="w-full min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px] text-slate-700">download</mat-icon>
+              <span>Backup Survey Data (JSON)</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="resetDemoData()"
+              class="w-full min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 font-bold text-amber-700 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">restore</mat-icon>
+              <span>Reset Active Mock Projects</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="logout()"
+              class="w-full min-h-[44px] bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">logout</mat-icon>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

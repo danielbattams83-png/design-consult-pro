@@ -1,0 +1,6 @@
+{
+  "name": "Design Consult Pro",
+  "description": "On-site client survey and site-measuring PWA for interior designers, architects, and contractors with interactive room sketching, condition logs, photo markup, and AI brief generation.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,755 @@
+<div class="w-full max-w-lg sm:max-w-2xl mx-auto pb-24 space-y-4 antialiased select-none sm:select-auto">
+  
+  <!-- ========================================== -->
+  <!-- TOP MOBILE STATUS BAR (Compact Metric Cards) -->
+  <!-- ========================================== -->
+  <header class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-slate-800 space-y-3.5">
+    <!-- Top Row: App Title & Offline/Online Status -->
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/30">
+          <mat-icon class="text-[20px] w-[20px] h-[20px]">architecture</mat-icon>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white leading-tight">
+            Design Consult Pro
+          </h1>
+          <p class="text-[10px] text-slate-400 font-medium">
+            Mobile Field Survey &amp; Site Takeoff Suite
+          </p>
+        </div>
+      </div>
+
+      <!-- Offline/Online Status Pill -->
+      <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-bold text-emerald-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="font-mono">Offline Ready</span>
+      </div>
+    </div>
+
+    <!-- Active Project Selection Quick Pill -->
+    <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <mat-icon class="text-orange-400 text-[18px] w-[18px] h-[18px] shrink-0">place</mat-icon>
+        <div class="truncate">
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Active Survey Site</span>
+          <span class="text-xs font-bold text-white truncate block">
+            {{ activeProject()?.name || '46 King Charles Dr. Sovereign Island' }}
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="openNewProjectModal()"
+        class="min-h-[38px] px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+      >
+        <mat-icon class="text-[16px] w-[16px] h-[16px]">add</mat-icon>
+        <span>New Site</span>
+      </button>
+    </div>
+
+    <!-- Compact 3-Column Metric Cards -->
+    <div class="grid grid-cols-3 gap-2 pt-1">
+      <!-- Card 1: Active Projects -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5 text-center">
+        <span class="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Active</span>
+        <div class="text-lg font-extrabold text-white font-mono-digits mt-0.5">
+          {{ activeProjectsCount() }}
+        </div>
+        <span class="text-[9px] text-slate-400 block font-medium">In Field</span>
+      </div>
+
+      <!-- Card 2: Completed Projects -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5 text-center">
+        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Completed</span>
+        <div class="text-lg font-extrabold text-white font-mono-digits mt-0.5">
+          {{ completedProjectsCount() }}
+        </div>
+        <span class="text-[9px] text-slate-400 block font-medium">Signed Off</span>
+      </div>
+
+      <!-- Card 3: Site Rooms -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5 text-center">
+        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Rooms</span>
+        <div class="text-lg font-extrabold text-white font-mono-digits mt-0.5">
+          {{ totalRoomsCount() }}
+        </div>
+        <span class="text-[9px] text-slate-400 block font-medium">
+          {{ totals().totalFloorArea }} {{ totals().unitStr }}
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- VERTICAL 6-STEP ACCORDION LIST STYLED FOR THUMB NAVIGATION -->
+  <!-- ============================================================== -->
+  <div class="space-y-3">
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 1: Start New Project -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <!-- Step Accordion Header (Min 52px Touch Target) -->
+      <button
+        type="button"
+        (click)="toggleStep(1)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            1
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <span>Start New Project</span>
+              @if (activeProject()) {
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+              }
+            </div>
+            <p class="text-[11px] text-slate-500 truncate max-w-[200px] sm:max-w-xs">
+              {{ activeProject()?.siteAddress || 'Select or create client survey' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                [class.bg-emerald-100]="activeProject()?.status === 'Completed'"
+                [class.text-emerald-800]="activeProject()?.status === 'Completed'"
+                [class.bg-orange-100]="activeProject()?.status !== 'Completed'"
+                [class.text-orange-800]="activeProject()?.status !== 'Completed'">
+            {{ activeProject()?.status || 'Active' }}
+          </span>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(1)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      <!-- Step 1 Content -->
+      @if (isStepOpen(1)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <!-- Active Project Quick Switcher -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Select Field Project
+            </span>
+            <div class="space-y-1.5">
+              @for (proj of projects(); track proj.id) {
+                <button
+                  type="button"
+                  (click)="switchProject(proj.id)"
+                  class="w-full min-h-[48px] p-3 rounded-xl border text-left flex items-center justify-between gap-2 cursor-pointer transition-all"
+                  [class.bg-orange-50]="activeProject()?.id === proj.id"
+                  [class.border-orange-500]="activeProject()?.id === proj.id"
+                  [class.ring-2]="activeProject()?.id === proj.id"
+                  [class.ring-orange-500/20]="activeProject()?.id === proj.id"
+                  [class.bg-white]="activeProject()?.id !== proj.id"
+                  [class.border-slate-200]="activeProject()?.id !== proj.id"
+                >
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-slate-900 truncate">{{ proj.name }}</div>
+                    <div class="text-[10px] text-slate-500 truncate">{{ proj.clientName }} &bull; {{ proj.siteAddress }}</div>
+                  </div>
+                  @if (activeProject()?.id === proj.id) {
+                    <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px] shrink-0">check_circle</mat-icon>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Project Details Meta Card -->
+          @if (activeProject(); as p) {
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 text-xs space-y-2">
+              <div class="flex justify-between items-center text-slate-500">
+                <span>Client:</span>
+                <span class="font-bold text-slate-900">{{ p.clientName }}</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-500">
+                <span>Site Address:</span>
+                <span class="font-bold text-slate-900 truncate max-w-[180px]">{{ p.siteAddress }}</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-500">
+                <span>Target Budget:</span>
+                <span class="font-bold text-slate-900 font-mono-digits">${{ p.targetBudget | number }}</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-500">
+                <span>Project Status:</span>
+                <button
+                  type="button"
+                  (click)="toggleProjectStatus()"
+                  class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 hover:bg-orange-100 hover:text-orange-800 cursor-pointer"
+                >
+                  {{ p.status }} (Tap to Toggle)
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Action Buttons (Large Touch Targets >= 48px) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              (click)="openNewProjectModal()"
+              class="w-full min-h-[48px] px-4 py-3 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px] text-orange-600">add_business</mat-icon>
+              <span>Create New Project</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="toggleStep(2)"
+              class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md shadow-orange-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Next: Meeting Notes</span>
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">arrow_forward</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 2: Client Meeting Notes -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <button
+        type="button"
+        (click)="toggleStep(2)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            2
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">Client Meeting Notes</div>
+            <p class="text-[11px] text-slate-500">
+              Archetypes, palette mood &amp; lifestyle brief
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-mono-digits">
+            {{ activeProject()?.survey?.selectedStyles?.length || 0 }} Styles
+          </span>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(2)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      @if (isStepOpen(2)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <!-- Selected Archetypes Pills -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Preferred Design Archetypes
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              @for (style of activeProject()?.survey?.selectedStyles; track style) {
+                <span class="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-900 text-[11px] font-bold capitalize">
+                  {{ style.replace('_', ' ') }}
+                </span>
+              } @empty {
+                <span class="text-xs text-slate-400 italic">No design archetype selected yet</span>
+              }
+            </div>
+          </div>
+
+          <!-- Color Mood Palette Preview Swatches -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Harmonized Palette Preview
+            </span>
+            <div class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200">
+              @for (c of activeProject()?.survey?.primaryColorPalette; track c) {
+                <div class="w-8 h-8 rounded-lg shadow-xs border border-black/10 shrink-0" [style.background-color]="c" [title]="c"></div>
+              }
+              <div class="text-[11px] text-slate-500 ml-2 font-medium">
+                {{ activeProject()?.survey?.colorMood || 'Warm Organic Mineral' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Consultation Notes Box -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Client Brief &amp; Anecdotes
+            </span>
+            <div class="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed max-h-24 overflow-y-auto">
+              {{ activeProject()?.survey?.clientNotes || activeProject()?.survey?.clientGeneralNotes || 'Loves morning light, dislikes visible cable clutter, requests travertine waterfall island...' }}
+            </div>
+          </div>
+
+          <!-- Full Screen Navigation Button (min 48px touch target) -->
+          <button
+            type="button"
+            (click)="navigateToTab('survey')"
+            class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md shadow-orange-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">assignment</mat-icon>
+            <span>Open Full Lifestyle Questionnaire</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 3: Site Measurements -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <button
+        type="button"
+        (click)="toggleStep(3)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            3
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">Site Measurements</div>
+            <p class="text-[11px] text-slate-500">
+              2D wall geometry, laser diagonals &amp; takeoffs
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-mono-digits">
+            {{ totalRoomsCount() }} Rooms
+          </span>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(3)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      @if (isStepOpen(3)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <!-- Room List with Dimensions and Squareness -->
+          <div class="space-y-2">
+            @for (room of activeProject()?.rooms; track room.id) {
+              <div class="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <span class="font-bold text-slate-900 block">{{ room.name }}</span>
+                  <span class="text-[10px] text-slate-500">
+                    Floor: <strong class="text-slate-800">{{ room.dimensions.calculatedFloorArea }} {{ totals().unitStr }}</strong> &bull;
+                    Ceiling: {{ room.dimensions.ceilingHeightFt }}ft
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                    <mat-icon class="text-[12px] w-[12px] h-[12px]">verified</mat-icon>
+                    <span>90° True</span>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Quick Room Creator Buttons -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Quick Add Room Template
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                (click)="quickAddRoom('Kitchen & Dining')"
+                class="min-h-[38px] px-3 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                + Kitchen
+              </button>
+              <button
+                type="button"
+                (click)="quickAddRoom('Master Suite')"
+                class="min-h-[38px] px-3 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                + Bedroom
+              </button>
+              <button
+                type="button"
+                (click)="quickAddRoom('Bathroom / Ensuite')"
+                class="min-h-[38px] px-3 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                + Ensuite
+              </button>
+              <button
+                type="button"
+                (click)="quickAddRoom('Alfresco / Terrace')"
+                class="min-h-[38px] px-3 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                + Terrace
+              </button>
+            </div>
+          </div>
+
+          <!-- Launch 2D CAD & Measure Tool Button (min 48px touch target) -->
+          <button
+            type="button"
+            (click)="navigateToTab('measure')"
+            class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md shadow-orange-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">straighten</mat-icon>
+            <span>Launch 2D CAD &amp; Laser Measure Tool</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 4: Photo Capture -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <button
+        type="button"
+        (click)="toggleStep(4)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            4
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">Photo Capture &amp; Voice Memos</div>
+            <p class="text-[11px] text-slate-500">
+              Pin annotations, MEP markers &amp; audio memos
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+            Active Pins
+          </span>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(4)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      @if (isStepOpen(4)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 text-center">
+              <mat-icon class="text-orange-500 text-[24px] w-[24px] h-[24px] mb-1">add_a_photo</mat-icon>
+              <div class="font-bold text-slate-900">Site Photo Annotator</div>
+              <div class="text-[10px] text-slate-500">Pins for electrical, plumbing &amp; MEP</div>
+            </div>
+            <div class="bg-white p-3 rounded-xl border border-slate-200 text-center">
+              <mat-icon class="text-rose-500 text-[24px] w-[24px] h-[24px] mb-1">mic</mat-icon>
+              <div class="font-bold text-slate-900">Voice Memos</div>
+              <div class="text-[10px] text-slate-500">Hands-free field walk dictation</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              (click)="navigateToTab('media')"
+              class="w-full min-h-[48px] px-4 py-3 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md shadow-orange-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">photo_camera</mat-icon>
+              <span>Open Photo Markup &amp; Audio</span>
+            </button>
+            <button
+              type="button"
+              (click)="navigateToTab('conditions')"
+              class="w-full min-h-[48px] px-4 py-3 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <mat-icon class="text-[18px] w-[18px] h-[18px] text-orange-600">construction</mat-icon>
+              <span>Site Conditions Audit</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 5: AI Design Concepts -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <button
+        type="button"
+        (click)="toggleStep(5)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            5
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900 flex items-center gap-1">
+              <span>AI Design Concepts</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold uppercase">Gemini</span>
+            </div>
+            <p class="text-[11px] text-slate-500">
+              Spatial recommendations, trade risks &amp; finishes
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <mat-icon class="text-orange-500 text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(5)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      @if (isStepOpen(5)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <div class="p-3 bg-orange-50/60 rounded-xl border border-orange-200/80 text-xs text-orange-950 space-y-1.5">
+            <div class="font-bold flex items-center gap-1.5 text-orange-900">
+              <mat-icon class="text-[16px] w-[16px] h-[16px]">psychology</mat-icon>
+              <span>Instant AI Concept Generation</span>
+            </div>
+            <p class="text-[11px] text-slate-600 leading-relaxed">
+              Synthesize client lifestyle survey, 2D dimensions, subfloor moisture and trade scope into a complete design brief in seconds.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            (click)="navigateToTab('ai')"
+            class="w-full min-h-[48px] px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+            <span>Generate &amp; Review AI Design Brief</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------ -->
+    <!-- STEP 6: Generate Report -->
+    <!-- ------------------------------------------------------------ -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all">
+      <button
+        type="button"
+        (click)="toggleStep(6)"
+        class="w-full min-h-[56px] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 active:bg-slate-100 transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-orange-500/20 shrink-0">
+            6
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">Generate Report &amp; Sign-off</div>
+            <p class="text-[11px] text-slate-500">
+              Executive takeoff summary &amp; client signature
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <mat-icon class="text-slate-500 text-[18px] w-[18px] h-[18px]">picture_as_pdf</mat-icon>
+          <mat-icon class="text-slate-400 transition-transform duration-200" [class.rotate-180]="isStepOpen(6)">
+            expand_more
+          </mat-icon>
+        </div>
+      </button>
+
+      @if (isStepOpen(6)) {
+        <div class="p-4 pt-1 border-t border-slate-100 space-y-3.5 bg-slate-50/40">
+          <div class="p-3 bg-white rounded-xl border border-slate-200 text-xs space-y-2">
+            <div class="flex justify-between items-center text-slate-600">
+              <span>Total Measured Area:</span>
+              <span class="font-bold text-slate-900 font-mono-digits">{{ totals().totalFloorArea }} {{ totals().unitStr }}</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-600">
+              <span>Wall Paint Takeoff:</span>
+              <span class="font-bold text-slate-900 font-mono-digits">{{ totals().totalWallArea }} {{ totals().unitStr }}</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-600">
+              <span>Client Signature:</span>
+              <span class="text-emerald-700 font-bold flex items-center gap-1">
+                <mat-icon class="text-[14px] w-[14px] h-[14px]">draw</mat-icon>
+                <span>Ready for Touch Signature</span>
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="navigateToTab('report')"
+            class="w-full min-h-[48px] px-4 py-3 bg-slate-900 hover:bg-black active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px] text-orange-400">print</mat-icon>
+            <span>View Full Report &amp; Client Sign-off</span>
+          </button>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Create New Site Survey / Project -->
+  <!-- ============================================================== -->
+  @if (isNewProjectModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div class="w-full max-w-xl my-auto">
+        <app-new-survey
+          [isModal]="true"
+          destinationTab="survey"
+          (surveyCreated)="onNewSurveyCreated($event)"
+          (cancelled)="isNewProjectModalOpen.set(false)"
+        ></app-new-survey>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Settings & Profile -->
+  <!-- ============================================================== -->
+  @if (isSettingsModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-slate-800">settings</mat-icon>
+            <h2 class="text-sm font-bold text-slate-900">App Preferences &amp; Field Storage</h2>
+          </div>
+          <button
+            type="button"
+            (click)="isSettingsModalOpen.set(false)"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">close</mat-icon>
+          </button>
+        </div>
+
+        <!-- User Profile Info -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+            {{ currentUser()?.name?.charAt(0) || 'A' }}
+          </div>
+          <div class="min-w-0">
+            <div class="font-bold text-slate-900 truncate">{{ currentUser()?.name }}</div>
+            <div class="text-[10px] text-slate-500 truncate">{{ currentUser()?.email }}</div>
+            <div class="text-[10px] text-orange-600 font-semibold">{{ currentUser()?.role }}</div>
+          </div>
+        </div>
+
+        <!-- Measurement Units Toggle -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <span class="font-bold text-slate-900 block">Measurement System</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              (click)="store.setUnit('imperial')"
+              class="min-h-[44px] rounded-lg font-bold border transition-all cursor-pointer"
+              [class.bg-orange-600]="unit() === 'imperial'"
+              [class.text-white]="unit() === 'imperial'"
+              [class.border-orange-600]="unit() === 'imperial'"
+              [class.bg-white]="unit() !== 'imperial'"
+              [class.text-slate-700]="unit() !== 'imperial'"
+            >
+              Imperial (ft / in / sq ft)
+            </button>
+            <button
+              type="button"
+              (click)="store.setUnit('metric')"
+              class="min-h-[44px] rounded-lg font-bold border transition-all cursor-pointer"
+              [class.bg-orange-600]="unit() === 'metric'"
+              [class.text-white]="unit() === 'metric'"
+              [class.border-orange-600]="unit() === 'metric'"
+              [class.bg-white]="unit() !== 'metric'"
+              [class.text-slate-700]="unit() !== 'metric'"
+            >
+              Metric (m / mm / m²)
+            </button>
+          </div>
+        </div>
+
+        <!-- Local Cache Actions -->
+        <div class="space-y-2 pt-1">
+          <button
+            type="button"
+            (click)="exportData()"
+            class="w-full min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px] text-slate-700">download</mat-icon>
+            <span>Backup Survey Data (JSON)</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="resetDemoData()"
+            class="w-full min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 font-bold text-amber-700 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">restore</mat-icon>
+            <span>Reset Active Mock Projects</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="logout()"
+            class="w-full min-h-[44px] bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">logout</mat-icon>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- STICKY BOTTOM MOBILE NAVIGATION BAR (Home, Surveys, Settings) -->
+  <!-- ============================================================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 text-white shadow-2xl flex items-center justify-around">
+    <!-- Tab 1: Home (Dashboard) -->
+    <button
+      type="button"
+      id="nav-tab-home"
+      (click)="navigateToTab('measure'); openStep.set(1)"
+      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-orange-400 font-bold text-[10px] cursor-pointer transition-colors"
+    >
+      <mat-icon class="text-[22px] w-[22px] h-[22px]">dashboard</mat-icon>
+      <span>Home</span>
+    </button>
+
+    <!-- Tab 2: Surveys (2D CAD & Measurements) -->
+    <button
+      type="button"
+      id="nav-tab-surveys"
+      (click)="navigateToTab('survey')"
+      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
+    >
+      <mat-icon class="text-[22px] w-[22px] h-[22px]">assignment</mat-icon>
+      <span>Surveys</span>
+    </button>
+
+    <!-- Tab 3: Takeoffs & CAD -->
+    <button
+      type="button"
+      id="nav-tab-measure"
+      (click)="navigateToTab('measure')"
+      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
+    >
+      <mat-icon class="text-[22px] w-[22px] h-[22px]">straighten</mat-icon>
+      <span>Measure</span>
+    </button>
+
+    <!-- Tab 4: Settings & Offline -->
+    <button
+      type="button"
+      id="nav-tab-settings"
+      (click)="isSettingsModalOpen.set(true)"
+      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
+    >
+      <mat-icon class="text-[22px] w-[22px] h-[22px]">settings</mat-icon>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+</div>

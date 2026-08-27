@@ -1,0 +1,241 @@
+@if (activeRoom(); as room) {
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+          <mat-icon class="text-[22px] w-[22px] h-[22px]">engineering</mat-icon>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Site Conditions &amp; MEP Infrastructure Audit ({{ room.name }})</h2>
+          <p class="text-xs text-slate-500">Structural, Subfloor Levelness, Electrical Panel, Plumbing, and HVAC Field Clearance Checks.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-mono-digits font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-700">
+          Zone: {{ room.level }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 4-Card Grid for Subfloor, Electrical, Plumbing, HVAC -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <!-- 1. Subfloor & Levelness Check -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 text-xs">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 font-bold text-slate-900">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">straighten</mat-icon>
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">1. Subfloor &amp; Levelness Audit</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono-digits">ASTM F710</span>
+        </div>
+
+        <div>
+          <label for="subfloor-level-select" class="block font-bold text-slate-700 mb-1.5">Floor Levelness (6ft / 10ft straightedge)</label>
+          <select
+            id="subfloor-level-select"
+            [value]="room.conditions?.subfloor?.levelness"
+            (change)="updateSubfloor('levelness', $any($event.target).value)"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500 cursor-pointer font-medium"
+          >
+            <option value="Excellent (True Flat <1/8 inch)">Excellent (True Flat &lt;1/8")</option>
+            <option value="Good (1/8 to 1/4 inch per 10ft)">Good (1/8" to 1/4" per 10ft)</option>
+            <option value="Fair (1/4 to 3/8 inch per 10ft)">Fair (1/4" to 3/8" per 10ft - Self-Leveler Recommended)</option>
+            <option value="Poor (Severe Slope >1/2 inch)">Poor (Severe Slope &gt;1/2" - Joist Sistering Required)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="subfloor-mat-input" class="block font-bold text-slate-700 mb-1.5">Subfloor Substrate</label>
+            <input
+              id="subfloor-mat-input"
+              type="text"
+              [value]="room.conditions?.subfloor?.material || '3/4 inch Plywood T&G'"
+              (change)="updateSubfloor('material', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500 font-medium"
+            />
+          </div>
+          <div>
+            <label for="subfloor-moisture-input" class="block font-bold text-slate-700 mb-1.5">Moisture Reading (%)</label>
+            <input
+              id="subfloor-moisture-input"
+              type="number"
+              [value]="room.conditions?.subfloor?.moistureReading || 9.2"
+              (change)="updateSubfloor('moistureReading', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Electrical Audit -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 text-xs">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 font-bold text-slate-900">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-amber-500 text-[18px] w-[18px] h-[18px]">bolt</mat-icon>
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">2. Electrical Infrastructure</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono-digits">NEC 2023</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="elec-panel-select" class="block font-bold text-slate-700 mb-1.5">Main Service Amps</label>
+            <select
+              id="elec-panel-select"
+              [value]="room.conditions?.electrical?.mainPanelAmps"
+              (change)="updateElectrical('mainPanelAmps', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 cursor-pointer font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            >
+              <option [value]="100">100 Amp Service</option>
+              <option [value]="150">150 Amp Service</option>
+              <option [value]="200">200 Amp Modern Service</option>
+              <option [value]="400">400 Amp High Capacity</option>
+            </select>
+          </div>
+          <div>
+            <label for="elec-grounded-select" class="block font-bold text-slate-700 mb-1.5">Grounded Wiring</label>
+            <select
+              id="elec-grounded-select"
+              [value]="room.conditions?.electrical?.groundedOutlets ? 'yes' : 'no'"
+              (change)="updateElectrical('groundedOutlets', $any($event.target).value === 'yes')"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 cursor-pointer font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="yes">Yes (3-prong Grounded Romex)</option>
+              <option value="no">No (2-prong / Knob &amp; Tube)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label for="outlet-count-input" class="block font-bold text-slate-700 mb-1.5">Outlets</label>
+            <input
+              id="outlet-count-input"
+              type="number"
+              [value]="room.conditions?.electrical?.outletCount"
+              (change)="updateElectrical('outletCount', $any($event.target).value)"
+              class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label for="switch-count-input" class="block font-bold text-slate-700 mb-1.5">Switches</label>
+            <input
+              id="switch-count-input"
+              type="number"
+              [value]="room.conditions?.electrical?.switchCount"
+              (change)="updateElectrical('switchCount', $any($event.target).value)"
+              class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label for="ceiling-box-count-input" class="block font-bold text-slate-700 mb-1.5">Ceiling J-Boxes</label>
+            <input
+              id="ceiling-box-count-input"
+              type="number"
+              [value]="room.conditions?.electrical?.ceilingJunctionBoxes"
+              (change)="updateElectrical('ceilingJunctionBoxes', $any($event.target).value)"
+              class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Plumbing Rough-in -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 text-xs">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 font-bold text-slate-900">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-sky-500 text-[18px] w-[18px] h-[18px]">water_damage</mat-icon>
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">3. Plumbing &amp; Fixtures</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono-digits">IPC 2021</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="plumbing-roughin-select" class="block font-bold text-slate-700 mb-1.5">Rough-In Present</label>
+            <select
+              id="plumbing-roughin-select"
+              [value]="room.conditions?.plumbing?.roughInPresent ? 'yes' : 'no'"
+              (change)="updatePlumbing('roughInPresent', $any($event.target).value === 'yes')"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 cursor-pointer font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="yes">Yes (Wet Wall In Place)</option>
+              <option value="no">No (Dry Room)</option>
+            </select>
+          </div>
+          <div>
+            <label for="plumbing-pipe-input" class="block font-bold text-slate-700 mb-1.5">Supply Lines</label>
+            <input
+              id="plumbing-pipe-input"
+              type="text"
+              [value]="room.conditions?.plumbing?.supplyLines || '1/2 inch Copper'"
+              (change)="updatePlumbing('supplyLines', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="plumbing-drain-input" class="block font-bold text-slate-700 mb-1.5">Drain / Stack Location</label>
+          <input
+            id="plumbing-drain-input"
+            type="text"
+            [value]="room.conditions?.plumbing?.drainStackLocation || 'Main 3-inch Waste Stack in North Wall'"
+            (change)="updatePlumbing('drainStackLocation', $any($event.target).value)"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+      </div>
+
+      <!-- 4. HVAC & Ventilation -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 text-xs">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 font-bold text-slate-900">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-emerald-500 text-[18px] w-[18px] h-[18px]">ac_unit</mat-icon>
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">4. HVAC &amp; Air Distribution</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono-digits">Manual J</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="hvac-system-input" class="block font-bold text-slate-700 mb-1.5">Heating &amp; Cooling</label>
+            <input
+              id="hvac-system-input"
+              type="text"
+              [value]="room.conditions?.hvac?.heatingType || 'Central Forced Air'"
+              (change)="updateHVAC('heatingType', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label for="hvac-registers-input" class="block font-bold text-slate-700 mb-1.5">Supply Registers</label>
+            <input
+              id="hvac-registers-input"
+              type="number"
+              [value]="room.conditions?.hvac?.supplyRegistersCount || 2"
+              (change)="updateHVAC('supplyRegistersCount', $any($event.target).value)"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="hvac-return-select" class="block font-bold text-slate-700 mb-1.5">Dedicated Return Vent</label>
+          <select
+            id="hvac-return-select"
+            [value]="room.conditions?.hvac?.returnVentPresent ? 'yes' : 'no'"
+            (change)="updateHVAC('returnVentPresent', $any($event.target).value === 'yes')"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 cursor-pointer font-medium focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="yes">Yes (Present in Room)</option>
+            <option value="no">No (Shared Central Return in Hallway)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+

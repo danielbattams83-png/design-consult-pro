@@ -1,0 +1,87 @@
+@if (squarenessAnalysis(); as analysis) {
+  <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+    <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+          <mat-icon class="text-[18px] w-[18px] h-[18px]">square_foot</mat-icon>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Diagonal Squareness Check</h4>
+          <p class="text-[11px] text-slate-500">Pythagorean &radic;(A&sup2; + B&sup2;) Field Tolerance Analysis</p>
+        </div>
+      </div>
+
+      <!-- Status Badge -->
+      <span
+        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border"
+        [class]="analysis.colorClass"
+      >
+        @if (analysis.status === 'square') {
+          <mat-icon class="text-[14px] w-[14px] h-[14px]">check_circle</mat-icon>
+        } @else if (analysis.status === 'minor_skew') {
+          <mat-icon class="text-[14px] w-[14px] h-[14px]">warning</mat-icon>
+        } @else {
+          <mat-icon class="text-[14px] w-[14px] h-[14px]">report_problem</mat-icon>
+        }
+        <span>{{ analysis.label }}</span>
+      </span>
+    </div>
+
+    <!-- 2-Column Diagonals Input & Theoretical -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-3">
+      <!-- Theoretical True 90° -->
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-500">Theoretical (90°)</div>
+        <div class="text-base font-bold font-mono-digits text-slate-900 mt-0.5">
+          {{ analysis.theoDiagFt }}'
+          <span class="text-xs font-normal text-slate-500">({{ (analysis.theoDiagFt * 0.3048).toFixed(2) }}m)</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-0.5">Based on {{ analysis.lFt }}' × {{ analysis.wFt }}'</div>
+      </div>
+
+      <!-- Measured Diagonal A-C -->
+      <div class="p-2.5 rounded-lg bg-orange-50/60 border border-orange-200/80">
+        <label for="diag-ac-input" class="text-[10px] uppercase font-bold text-orange-900 block">Measured Diagonal A-C (ft)</label>
+        <div class="flex items-center gap-1.5 mt-1">
+          <input
+            id="diag-ac-input"
+            type="number"
+            step="0.05"
+            [value]="analysis.actualACFt"
+            (change)="updateDiagonalAC($any($event.target).value)"
+            class="w-full px-2 py-1 bg-white border border-orange-300 rounded text-xs font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+          />
+          <span class="text-xs text-orange-900 font-bold">ft</span>
+        </div>
+      </div>
+
+      <!-- Measured Diagonal B-D -->
+      <div class="p-2.5 rounded-lg bg-orange-50/60 border border-orange-200/80">
+        <label for="diag-bd-input" class="text-[10px] uppercase font-bold text-orange-900 block">Measured Diagonal B-D (ft)</label>
+        <div class="flex items-center gap-1.5 mt-1">
+          <input
+            id="diag-bd-input"
+            type="number"
+            step="0.05"
+            [value]="analysis.actualBDFt"
+            (change)="updateDiagonalBD($any($event.target).value)"
+            class="w-full px-2 py-1 bg-white border border-orange-300 rounded text-xs font-mono-digits font-bold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+          />
+          <span class="text-xs text-orange-900 font-bold">ft</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architectural Advisory Output -->
+    <div class="flex items-start gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
+      <mat-icon class="text-[16px] w-[16px] h-[16px] text-orange-600 shrink-0 mt-0.5">info</mat-icon>
+      <div class="leading-relaxed">
+        <span class="font-bold text-slate-900">Trade Impact: </span>
+        <span>{{ analysis.advisory }}</span>
+        @if (analysis.diffInches > 0) {
+          <span class="font-mono-digits text-slate-500 ml-1 font-semibold">(Δ = {{ analysis.diffInches }}" differential)</span>
+        }
+      </div>
+    </div>
+  </div>
+}

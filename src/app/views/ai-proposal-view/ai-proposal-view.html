@@ -1,0 +1,225 @@
+@if (activeProject(); as proj) {
+  <div class="space-y-8">
+    <!-- Top Action Card: Proposal Generator -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-[11px] font-bold uppercase tracking-wider mb-1.5">
+          <mat-icon class="text-[14px] w-[14px] h-[14px]">auto_awesome</mat-icon>
+          <span>AI Consultation Synthesis</span>
+        </div>
+        <h2 class="text-lg font-extrabold text-slate-900">Automated Design Brief & Material Takeoff</h2>
+        <p class="text-xs text-slate-500 mt-0.5">
+          Synthesizes all {{ proj.rooms.length }} measured rooms, client style preferences, and site condition audits into a client proposal.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="generate-brief-btn"
+        (click)="generateProposal()"
+        [disabled]="isGenerating()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+      >
+        @if (isGenerating()) {
+          <mat-icon class="text-[18px] w-[18px] h-[18px] animate-spin">refresh</mat-icon>
+          <span>Analyzing Dimensions & Styles...</span>
+        } @else {
+          <mat-icon class="text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+          <span>{{ proj.aiProposal ? 'Regenerate Brief' : 'Generate Full AI Brief' }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- Generated Proposal Content -->
+    @if (proj.aiProposal; as proposal) {
+      <div class="space-y-6 animate-in fade-in duration-200">
+        <!-- 1. Executive Summary & Design Concept -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Summary -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-2">
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">summarize</mat-icon>
+              <span>Executive Scope Summary</span>
+            </h3>
+            <p class="text-xs text-slate-700 leading-relaxed">{{ proposal.executiveSummary }}</p>
+          </div>
+
+          <!-- Concept -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-2">
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">palette</mat-icon>
+              <span>Architectural Concept & Finishes</span>
+            </h3>
+            <p class="text-xs text-slate-700 leading-relaxed">{{ proposal.designConcept }}</p>
+          </div>
+        </div>
+
+        <!-- 2. Recommended Finish & Paint Schedule -->
+        @if (proposal.paletteSuggestions.length) {
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">color_lens</mat-icon>
+              <span>Curated Color & Material Palette</span>
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              @for (item of proposal.paletteSuggestions; track item.name) {
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg border border-slate-300 shadow-2xs shrink-0" [style.background-color]="item.hex"></div>
+                    <div class="overflow-hidden">
+                      <div class="font-bold text-slate-900 truncate">{{ item.name }}</div>
+                      <div class="font-mono-digits text-[10px] text-slate-500 uppercase">{{ item.hex }}</div>
+                    </div>
+                  </div>
+                  <div class="text-[11px] text-slate-600">
+                    <span class="font-semibold text-slate-800">Role: </span>{{ item.role }}
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">
+                    Finish: {{ item.finish }}
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- 3. Precision Material Takeoffs Table -->
+        @if (proposal.materialTakeoffs.length) {
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3 overflow-hidden">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">calculate</mat-icon>
+                <span>Automated Material Takeoff Calculations</span>
+              </h3>
+              <span class="text-[11px] text-slate-500">Includes trade waste factors</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                    <th class="py-2.5 px-3">Room / Scope</th>
+                    <th class="py-2.5 px-3">Material Specification</th>
+                    <th class="py-2.5 px-3">Est. Quantity</th>
+                    <th class="py-2.5 px-3">Net Area Basis</th>
+                    <th class="py-2.5 px-3">Waste Buffer</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                  @for (row of proposal.materialTakeoffs; track row.item) {
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                      <td class="py-2.5 px-3 font-semibold text-slate-900">{{ row.room }}</td>
+                      <td class="py-2.5 px-3 font-medium">{{ row.item }}</td>
+                      <td class="py-2.5 px-3 font-bold font-mono-digits text-orange-600">
+                        {{ row.estimatedQuantity }} {{ row.unit }}
+                      </td>
+                      <td class="py-2.5 px-3 text-slate-500 font-mono-digits">{{ row.calculationBasis }}</td>
+                      <td class="py-2.5 px-3 text-slate-500 text-[11px]">{{ row.wasteAllowance }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <!-- 4. Contractor Risk & Site Alerts -->
+        @if (proposal.contractorRiskAlerts.length) {
+          <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 space-y-2">
+            <h3 class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+              <mat-icon class="text-amber-600 text-[18px] w-[18px] h-[18px]">warning</mat-icon>
+              <span>Trade & Contractor Field Risk Alerts</span>
+            </h3>
+            <ul class="space-y-1.5 text-xs text-amber-950">
+              @for (alert of proposal.contractorRiskAlerts; track alert) {
+                <li class="flex items-start gap-2">
+                  <mat-icon class="text-amber-600 text-[14px] w-[14px] h-[14px] shrink-0 mt-0.5">arrow_right</mat-icon>
+                  <span>{{ alert }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- On-Site Architectural / Code Q&A Assistant -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+      <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+        <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold">
+          <mat-icon class="text-[18px] w-[18px] h-[18px] text-orange-400">help_outline</mat-icon>
+        </div>
+        <div>
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Field Consultant & Code Assistant</h3>
+          <p class="text-[11px] text-slate-500">Ask building code questions, kitchen clearances, ADA requirements, or fixture spacing.</p>
+        </div>
+      </div>
+
+      <!-- Quick Prompt Chips -->
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          (click)="askAssistant('What are the standard kitchen work triangle distance clearances?')"
+          class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg transition-colors cursor-pointer"
+        >
+          Kitchen Work Triangle?
+        </button>
+        <button
+          type="button"
+          (click)="askAssistant('What is the minimum IRC code clearance in front of a toilet and shower?')"
+          class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg transition-colors cursor-pointer"
+        >
+          Bath & Shower IRC Clearances?
+        </button>
+        <button
+          type="button"
+          (click)="askAssistant('What is the recommended subfloor levelness tolerance for wide-plank hardwood?')"
+          class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg transition-colors cursor-pointer"
+        >
+          Hardwood Subfloor Tolerances?
+        </button>
+      </div>
+
+      <!-- Conversation Stream -->
+      <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
+        @for (msg of qaHistory(); track msg.text) {
+          <div
+            class="p-3 rounded-xl text-xs leading-relaxed max-w-2xl"
+            [class.bg-orange-50]="msg.role === 'user'"
+            [class.text-orange-950]="msg.role === 'user'"
+            [class.ml-auto]="msg.role === 'user'"
+            [class.border]="msg.role === 'user'"
+            [class.border-orange-200]="msg.role === 'user'"
+            [class.bg-slate-50]="msg.role === 'assistant'"
+            [class.text-slate-800]="msg.role === 'assistant'"
+            [class.border-slate-200]="msg.role === 'assistant'"
+          >
+            <div class="text-[10px] font-bold uppercase tracking-wider mb-1" [class.text-orange-700]="msg.role === 'user'" [class.text-slate-500]="msg.role === 'assistant'">
+              {{ msg.role === 'user' ? 'You (Field Surveyor)' : 'Architectural Advisor AI' }}
+            </div>
+            <p>{{ msg.text }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Input Form -->
+      <form (submit)="askAssistant(); $event.preventDefault()" class="flex gap-2">
+        <input
+          type="text"
+          [value]="questionInput()"
+          (input)="questionInput.set($any($event.target).value)"
+          placeholder="Ask a technical or architectural code question..."
+          class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-orange-500"
+        />
+        <button
+          type="submit"
+          [disabled]="!questionInput().trim() || isAskingQA()"
+          class="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+        >
+          Ask Assistant
+        </button>
+      </form>
+    </div>
+  </div>
+}

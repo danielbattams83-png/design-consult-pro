@@ -1,0 +1,309 @@
+<div class="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+  <!-- Mobile Header Banner -->
+  <div class="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-xs">
+        <mat-icon class="text-[22px] w-[22px] h-[22px]">add_location_alt</mat-icon>
+      </div>
+      <div>
+        <h1 class="text-base sm:text-lg font-bold text-white tracking-tight leading-tight">
+          New Site Survey
+        </h1>
+        <p class="text-xs text-slate-400">
+          On-Site Field Intake &amp; Client Data
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Quick Sample Fill for fast mobile testing -->
+      <button
+        type="button"
+        id="btn-load-sample-survey"
+        (click)="loadSampleData(1)"
+        title="Fill Sample Site Data"
+        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-300 text-[11px] font-semibold transition-colors cursor-pointer border border-slate-700 min-h-[36px]"
+      >
+        <mat-icon class="text-[16px] w-[16px] h-[16px]">auto_awesome</mat-icon>
+        <span class="hidden xs:inline">Sample Data</span>
+      </button>
+
+      @if (isModal()) {
+        <button
+          type="button"
+          id="btn-close-new-survey"
+          (click)="onCancel()"
+          class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <mat-icon class="text-[20px] w-[20px] h-[20px]">close</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Form Body (Single-Column Stacked Layout) -->
+  <form [formGroup]="surveyForm" (ngSubmit)="submitForm()" class="flex-1 flex flex-col">
+    <div class="p-4 sm:p-6 space-y-5 flex-1">
+      
+      <!-- 1. PROJECT NAME (Required) -->
+      <div class="space-y-1.5">
+        <label for="survey-project-name" class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700">
+          <span>Project Name <span class="text-orange-600 font-black">*</span></span>
+          <span class="text-[11px] font-normal text-slate-400">e.g. Residence or Scope</span>
+        </label>
+        <div class="relative">
+          <input
+            type="text"
+            id="survey-project-name"
+            formControlName="projectName"
+            placeholder="e.g., 46 King Charles Dr. Renovation"
+            class="w-full text-base p-4 min-h-[52px] bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            [class.border-red-500]="submittedAttempted() && surveyForm.controls.projectName.invalid"
+            [class.bg-red-50]="submittedAttempted() && surveyForm.controls.projectName.invalid"
+            [class.border-slate-300]="!submittedAttempted() || !surveyForm.controls.projectName.invalid"
+          />
+        </div>
+        @if (submittedAttempted() && surveyForm.controls.projectName.hasError('required')) {
+          <p class="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
+            <mat-icon class="text-[14px] w-[14px] h-[14px]">error_outline</mat-icon>
+            <span>Project name is required to start a survey.</span>
+          </p>
+        }
+      </div>
+
+      <!-- 2. CLIENT NAME -->
+      <div class="space-y-1.5">
+        <label for="survey-client-name" class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700">
+          <span>Client Name</span>
+          <span class="text-[11px] font-normal text-slate-400">Homeowner / Principal</span>
+        </label>
+        <input
+          type="text"
+          id="survey-client-name"
+          formControlName="clientName"
+          placeholder="e.g., Harrison & Vivienne Sterling"
+          class="w-full text-base p-4 min-h-[52px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        />
+      </div>
+
+      <!-- 3. SITE ADDRESS (Required) + MOBILE GPS LOCATION BUTTON -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="survey-site-address" class="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Site Address <span class="text-orange-600 font-black">*</span>
+          </label>
+          <span class="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+            <mat-icon class="text-[14px] w-[14px] h-[14px] text-orange-500">place</mat-icon>
+            Physical Location
+          </span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <!-- Text Input for Address -->
+          <div class="relative flex-1">
+            <input
+              type="text"
+              id="survey-site-address"
+              formControlName="siteAddress"
+              placeholder="e.g., 46 King Charles Dr, Sovereign Islands"
+              class="w-full text-base p-4 min-h-[52px] bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              [class.border-red-500]="submittedAttempted() && surveyForm.controls.siteAddress.invalid"
+              [class.bg-red-50]="submittedAttempted() && surveyForm.controls.siteAddress.invalid"
+              [class.border-slate-300]="!submittedAttempted() || !surveyForm.controls.siteAddress.invalid"
+            />
+          </div>
+
+          <!-- Mobile GPS Location Button -->
+          <button
+            type="button"
+            id="btn-mobile-gps-locate"
+            (click)="acquireGpsLocation()"
+            [disabled]="isLocatingGps()"
+            class="min-h-[52px] px-4 py-3 bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed border border-slate-800"
+          >
+            @if (isLocatingGps()) {
+              <mat-icon class="text-[20px] w-[20px] h-[20px] animate-spin text-orange-400">autorenew</mat-icon>
+              <span class="text-xs">Locating...</span>
+            } @else {
+              <mat-icon class="text-[20px] w-[20px] h-[20px] text-orange-400">my_location</mat-icon>
+              <span class="text-xs">Use GPS</span>
+            }
+          </button>
+        </div>
+
+        <!-- GPS Status or Coordinates Feedback Badge -->
+        @if (gpsSuccessCoordinates(); as coords) {
+          <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+            <div class="flex items-center gap-1.5">
+              <mat-icon class="text-[16px] w-[16px] h-[16px] text-emerald-600">gps_fixed</mat-icon>
+              <span class="font-mono-digits font-semibold">
+                GPS Lat: {{ coords.lat.toFixed(5) }}, Lng: {{ coords.lng.toFixed(5) }}
+              </span>
+              @if (coords.accuracy) {
+                <span class="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded font-mono-digits">±{{ coords.accuracy }}m</span>
+              }
+            </div>
+            <button
+              type="button"
+              (click)="gpsSuccessCoordinates.set(null)"
+              class="text-emerald-600 hover:text-emerald-900 text-[11px] font-bold"
+            >
+              Clear
+            </button>
+          </div>
+        }
+
+        @if (gpsError()) {
+          <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-1.5 text-xs text-amber-800">
+            <mat-icon class="text-[16px] w-[16px] h-[16px] text-amber-600">warning</mat-icon>
+            <span>{{ gpsError() }}</span>
+          </div>
+        }
+
+        @if (submittedAttempted() && surveyForm.controls.siteAddress.hasError('required')) {
+          <p class="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
+            <mat-icon class="text-[14px] w-[14px] h-[14px]">error_outline</mat-icon>
+            <span>Site address or GPS coordinates are required.</span>
+          </p>
+        }
+      </div>
+
+      <!-- 4 & 5. LOT NUMBER & RP NUMBER (Two-column on tablet, stacked on narrow mobile) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Lot Number -->
+        <div class="space-y-1.5">
+          <label for="survey-lot-number" class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700">
+            <span>Lot Number</span>
+            <span class="text-[10px] text-slate-400 font-normal">Cadastral</span>
+          </label>
+          <input
+            type="text"
+            id="survey-lot-number"
+            formControlName="lotNumber"
+            placeholder="e.g., Lot 148"
+            class="w-full text-base p-4 min-h-[52px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+
+        <!-- RP Number (Registered Plan) -->
+        <div class="space-y-1.5">
+          <label for="survey-rp-number" class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700">
+            <span>RP / Plan Number</span>
+            <span class="text-[10px] text-slate-400 font-normal">Title Deed</span>
+          </label>
+          <input
+            type="text"
+            id="survey-rp-number"
+            formControlName="rpNumber"
+            placeholder="e.g., RP849201"
+            class="w-full text-base p-4 min-h-[52px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+      </div>
+
+      <!-- 6. SITE AREA -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="survey-site-area" class="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Site / Block Area
+          </label>
+          <!-- Quick unit tags -->
+          <div class="flex items-center gap-1">
+            @for (unit of areaUnits; track unit) {
+              <button
+                type="button"
+                (click)="setAreaUnit(unit)"
+                class="px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-colors"
+                [class.bg-slate-900]="selectedAreaUnit() === unit"
+                [class.text-white]="selectedAreaUnit() === unit"
+                [class.bg-slate-100]="selectedAreaUnit() !== unit"
+                [class.text-slate-600]="selectedAreaUnit() !== unit"
+              >
+                {{ unit }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="relative">
+          <input
+            type="text"
+            id="survey-site-area"
+            formControlName="siteArea"
+            placeholder="e.g., 850 m² or 9,150 sq ft"
+            class="w-full text-base p-4 min-h-[52px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+          <mat-icon class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">aspect_ratio</mat-icon>
+        </div>
+      </div>
+
+      <!-- 7. SURVEY DATE (Native Mobile Date Picker) -->
+      <div class="space-y-1.5">
+        <label for="survey-date-picker" class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700">
+          <span>Survey Date <span class="text-orange-600 font-black">*</span></span>
+          <span class="text-[11px] font-normal text-slate-400">On-Site Inspection</span>
+        </label>
+        <div class="relative">
+          <input
+            type="date"
+            id="survey-date-picker"
+            formControlName="surveyDate"
+            class="w-full text-base p-4 min-h-[52px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none"
+          />
+        </div>
+      </div>
+
+      <!-- 8. INITIAL NOTES (High-Contrast Textarea with Quick Chips) -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label for="survey-initial-notes" class="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Initial Notes &amp; Site Brief
+          </label>
+          <span class="text-[11px] text-slate-400">Field Directives</span>
+        </div>
+
+        <textarea
+          id="survey-initial-notes"
+          formControlName="initialNotes"
+          rows="4"
+          placeholder="Enter on-site client briefing notes, structural constraints, access codes, style directives, or key focal points..."
+          class="w-full text-base p-4 min-h-[120px] bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 font-medium transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 leading-relaxed resize-y"
+        ></textarea>
+
+        <!-- Quick Note Chips for fast field entry -->
+        <div class="space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Quick Insert Tags:
+          </span>
+          <div class="flex flex-wrap gap-1.5">
+            @for (chip of quickNoteChips; track chip) {
+              <button
+                type="button"
+                (click)="appendNoteChip(chip)"
+                class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-orange-100 hover:text-orange-800 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer border border-slate-200"
+              >
+                + {{ chip }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LARGE, STICKY BOTTOM CALL-TO-ACTION BUTTON -->
+    <div class="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 sm:p-5 shadow-2xl">
+      <button
+        type="submit"
+        id="btn-start-design-consult"
+        class="w-full min-h-[56px] px-6 py-4 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-black text-base uppercase tracking-wider shadow-lg flex items-center justify-center gap-2.5 transition-all cursor-pointer transform active:scale-[0.99]"
+      >
+        <mat-icon class="text-[24px] w-[24px] h-[24px]">straighten</mat-icon>
+        <span>Start Design Consult</span>
+        <mat-icon class="text-[20px] w-[20px] h-[20px]">arrow_forward</mat-icon>
+      </button>
+      <p class="text-center text-[11px] text-slate-500 mt-2 font-medium">
+        Creates survey record &amp; immediately opens active 2D measuring workspace
+      </p>
+    </div>
+  </form>
+</div>

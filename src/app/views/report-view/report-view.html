@@ -1,0 +1,275 @@
+@if (activeProject(); as proj) {
+  <div class="space-y-6">
+    <!-- Top Action Bar (hidden when printing) -->
+    <div class="no-print bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+          <mat-icon class="text-[20px] w-[20px] h-[20px]">assignment_turned_in</mat-icon>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Client Consultation & Field Survey Report</h2>
+          <p class="text-xs text-slate-500">Official sign-off document for client review, architectural drafting, and trade contractor bidding.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="print-report-btn"
+          (click)="printReport()"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+        >
+          <mat-icon class="text-[18px] w-[18px] h-[18px] text-orange-400">print</mat-icon>
+          <span>Print / Export PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- The Printable Document Container -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-sm space-y-8 max-w-4xl mx-auto printable-report">
+      <!-- Letterhead -->
+      <div class="flex items-start justify-between border-b-2 border-slate-900 pb-6">
+        <div>
+          <div class="flex items-center gap-2 text-orange-600">
+            <mat-icon class="text-[24px] w-[24px] h-[24px]">architecture</mat-icon>
+            <span class="text-xs font-black tracking-widest uppercase">Design Consult Pro Field Services</span>
+          </div>
+          <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">ON-SITE SURVEY &amp; DESIGN BRIEF</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Report Ref: #DCP-{{ proj.id.toUpperCase() }}</p>
+        </div>
+
+        <div class="text-right text-xs">
+          <div class="font-bold text-slate-900">{{ proj.createdAt | date:'mediumDate' }}</div>
+          <div class="text-slate-500 mt-0.5">Status: <span class="font-bold uppercase text-orange-600">{{ proj.status }}</span></div>
+        </div>
+      </div>
+
+      <!-- Project & Client Metadata Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Project Title</span>
+          <span class="font-bold text-slate-900">{{ proj.name }}</span>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Client Name</span>
+          <span class="font-bold text-slate-900">{{ proj.clientName }}</span>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Site Location</span>
+          <span class="font-bold text-slate-900">{{ proj.siteAddress }}</span>
+          @if (proj.latitude && proj.longitude) {
+            <span class="block text-[10px] text-emerald-700 font-mono-digits">GPS: {{ proj.latitude.toFixed(4) }}, {{ proj.longitude.toFixed(4) }}</span>
+          }
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Target Budget</span>
+          <span class="font-bold font-mono-digits text-slate-900">${{ proj.targetBudget | number }}</span>
+        </div>
+
+        @if (proj.lotNumber || proj.rpNumber || proj.siteArea || proj.surveyDate) {
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Cadastral Lot</span>
+            <span class="font-bold text-slate-900">{{ proj.lotNumber || 'N/A' }}</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">RP / Plan #</span>
+            <span class="font-bold text-slate-900">{{ proj.rpNumber || 'N/A' }}</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Site Area</span>
+            <span class="font-bold text-slate-900">{{ proj.siteArea || 'N/A' }}</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Survey Date</span>
+            <span class="font-bold text-slate-900">{{ proj.surveyDate || (proj.createdAt | date:'mediumDate') }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Surveyed Room Dimensions Schedule -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+          <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">straighten</mat-icon>
+          <span>Measured Room Dimensions &amp; Square Footage Schedule</span>
+        </h3>
+
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 text-slate-500 font-bold bg-slate-50">
+              <th class="py-2 px-3">Room Zone</th>
+              <th class="py-2 px-3">Level</th>
+              <th class="py-2 px-3">Perimeter</th>
+              <th class="py-2 px-3">Ceiling Height</th>
+              <th class="py-2 px-3">Floor Area</th>
+              <th class="py-2 px-3">Paint Wall Area</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-800">
+            @for (room of proj.rooms; track room.id) {
+              <tr>
+                <td class="py-2 px-3 font-bold text-slate-900">{{ room.name }}</td>
+                <td class="py-2 px-3 text-slate-600">{{ room.level }}</td>
+                <td class="py-2 px-3 font-mono-digits">{{ room.dimensions.calculatedPerimeter }} {{ unit() === 'metric' ? 'm' : 'ft' }}</td>
+                <td class="py-2 px-3 font-mono-digits">{{ room.dimensions.ceilingHeightFt }}'</td>
+                <td class="py-2 px-3 font-bold font-mono-digits text-orange-600">{{ room.dimensions.calculatedFloorArea }} {{ unit() === 'metric' ? 'm²' : 'sq ft' }}</td>
+                <td class="py-2 px-3 font-mono-digits">{{ room.dimensions.calculatedWallSurface }} {{ unit() === 'metric' ? 'm²' : 'sq ft' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-slate-900 font-bold bg-slate-50 text-slate-900">
+              <td class="py-2 px-3" colspan="4">TOTAL SURVEYED NET AREA</td>
+              <td class="py-2 px-3 font-mono-digits text-orange-600 text-sm" colspan="2">
+                {{ totals().totalArea }} {{ totals().unitStr }} ({{ totals().totalRooms }} Rooms)
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Design Brief & Aesthetic Summary -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+          <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">palette</mat-icon>
+          <span>Design Aesthetic &amp; Functional Direction</span>
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Selected Styles</div>
+            <div class="font-bold text-slate-900">{{ proj.survey.selectedStyles.join(', ') || 'Modern Organic' }}</div>
+            <div class="text-slate-500 text-[11px] mt-1">Color Palette: <span class="font-medium text-slate-800">{{ proj.survey.colorMood }}</span></div>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Priority Goals</div>
+            <div class="text-slate-800 font-medium">{{ proj.survey.functionalPriorities?.join(' • ') || 'Storage, Lighting' }}</div>
+            <div class="text-slate-500 text-[11px] mt-1">Timeline: <span class="font-medium text-slate-800">{{ proj.survey.targetTimeline || 'Standard (3-6 mo)' }}</span></div>
+          </div>
+        </div>
+
+        @if (proj.survey.clientNotes) {
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+            <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Consultation Anecdotes &amp; Requirements</div>
+            <p class="text-slate-700 italic leading-relaxed">{{ proj.survey.clientNotes }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- AI Proposal Highlights (if generated) -->
+      @if (proj.aiProposal; as proposal) {
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+            <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+            <span>Consultation Proposal &amp; Material Takeoff</span>
+          </h3>
+
+          <p class="text-xs text-slate-700 leading-relaxed">{{ proposal.executiveSummary }}</p>
+
+          @if (proposal.materialTakeoffs.length) {
+            <div class="overflow-x-auto mt-2">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <th class="py-1.5 px-2">Material / Scope</th>
+                    <th class="py-1.5 px-2">Estimated Quantity</th>
+                    <th class="py-1.5 px-2">Waste Buffer</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                  @for (m of proposal.materialTakeoffs; track m.item) {
+                    <tr>
+                      <td class="py-1.5 px-2 font-medium">{{ m.item }}</td>
+                      <td class="py-1.5 px-2 font-bold font-mono-digits text-slate-900">{{ m.estimatedQuantity }} {{ m.unit }}</td>
+                      <td class="py-1.5 px-2 text-slate-500">{{ m.wasteAllowance }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Interactive Digital Signature Section -->
+      <div class="pt-6 border-t-2 border-slate-900 space-y-4">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <mat-icon class="text-orange-600 text-[18px] w-[18px] h-[18px]">draw</mat-icon>
+          <span>Client Sign-Off &amp; Field Measurement Acknowledgment</span>
+        </h3>
+
+        <p class="text-xs text-slate-600 leading-relaxed">
+          By signing below, the client acknowledges the on-site dimensional measurements, architectural ceiling clearances, and preliminary design criteria recorded during this consultation session.
+        </p>
+
+        <!-- Signature Pad / Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+          <!-- Canvas Area -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-700 block mb-1">
+              {{ proj.clientSignOff ? 'Client Signature on File' : 'Sign on screen / tablet below:' }}
+            </span>
+
+            <div class="border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 overflow-hidden relative">
+              <canvas
+                #sigCanvas
+                width="360"
+                height="130"
+                (mousedown)="startSig($event)"
+                (mousemove)="drawSig($event)"
+                (mouseup)="stopSig()"
+                (mouseleave)="stopSig()"
+                (touchstart)="onTouchStart($event)"
+                (touchmove)="onTouchMove($event)"
+                (touchend)="onTouchEnd()"
+                class="w-full h-32 block touch-none cursor-crosshair"
+              ></canvas>
+
+              @if (!proj.clientSignOff) {
+                <div class="absolute bottom-1 right-2 text-[10px] text-slate-400 pointer-events-none">Sign Here ✍️</div>
+              }
+            </div>
+
+            <div class="no-print flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                (click)="clearSignature()"
+                class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-semibold rounded cursor-pointer transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                (click)="saveSignature()"
+                class="px-3.5 py-1 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-bold rounded shadow-2xs cursor-pointer transition-colors"
+              >
+                Accept &amp; Save Signature
+              </button>
+            </div>
+          </div>
+
+          <!-- Signer Name & Timestamp -->
+          <div class="space-y-3 text-xs">
+            <div>
+              <label for="signer-name-input" class="text-[11px] font-bold text-slate-700 block mb-1">Signee Name</label>
+              <input
+                id="signer-name-input"
+                type="text"
+                [value]="signerName() || proj.clientSignOff?.signedByName || proj.clientName"
+                (input)="signerName.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900"
+              />
+            </div>
+
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Date Signed</span>
+              <span class="font-bold text-slate-800">
+                {{ proj.clientSignOff?.signedAt ? (proj.clientSignOff?.signedAt | date:'medium') : 'Pending Signature' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
