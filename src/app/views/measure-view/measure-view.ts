@@ -50,6 +50,19 @@ export class MeasureViewComponent {
           r.dimensions.walls[3].lengthFt = w;
           r.dimensions.walls[3].heightFt = h;
         }
+        const poly = r.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly');
+        if (poly?.points?.length === 4) {
+          const toFeet = (value: number) => (this.unit() === 'metric' ? value / 304.8 : value);
+          const origin = poly.points[0];
+          const widthPx = toFeet(l) * 20;
+          const depthPx = toFeet(w) * 20;
+          poly.points = [
+            origin,
+            { x: origin.x + widthPx, y: origin.y },
+            { x: origin.x + widthPx, y: origin.y + depthPx },
+            { x: origin.x, y: origin.y + depthPx },
+          ];
+        }
       }
       return r;
     });
@@ -59,8 +72,11 @@ export class MeasureViewComponent {
     const val = parseFloat(lengthVal);
     if (!isNaN(val) && val > 0) {
       this.store.updateActiveRoom((r) => {
-        const wall = r.dimensions.walls.find((w) => w.id === wallId);
-        if (wall) wall.lengthFt = val;
+        const index = r.dimensions.walls.findIndex((w) => w.id === wallId);
+        if (index >= 0) {
+          r.dimensions.walls[index].lengthFt = val;
+          this.store.stretchWallEdge(r, index, val);
+        }
         return r;
       });
     }
@@ -92,6 +108,18 @@ export class MeasureViewComponent {
     this.store.updateActiveRoom((r) => {
       if (!r.openings) r.openings = [];
       r.openings.push(newOpening);
+      const shapeType = type === 'window' ? 'window' : 'door';
+      r.canvasSketch.shapes.push({
+        id: 'elem_' + newOpening.id,
+        type: shapeType,
+        openingId: newOpening.id,
+        x: 180,
+        y: 180,
+        width: type === 'window' ? 60 : 44,
+        height: type === 'window' ? 14 : 44,
+        rotation: 0,
+        label: type === 'window' ? 'Window' : 'Door',
+      });
       return r;
     });
   }
@@ -99,6 +127,7 @@ export class MeasureViewComponent {
   removeOpening(openingId: string): void {
     this.store.updateActiveRoom((r) => {
       r.openings = (r.openings || []).filter((o) => o.id !== openingId);
+      r.canvasSketch.shapes = (r.canvasSketch?.shapes || []).filter((shape) => shape.openingId !== openingId);
       return r;
     });
   }

@@ -20,6 +20,7 @@ export class AiProposalViewComponent {
   activeRoom = this.store.activeRoom;
 
   readonly isGenerating = signal<boolean>(false);
+  readonly aiError = signal<string | null>(null);
   readonly isAskingQA = signal<boolean>(false);
   readonly questionInput = signal<string>('');
   readonly qaHistory = signal<{ role: 'user' | 'assistant'; text: string }[]>([
@@ -34,6 +35,7 @@ export class AiProposalViewComponent {
     if (!proj) return;
 
     this.isGenerating.set(true);
+    this.aiError.set(null);
 
     this.aiService.generateProposalBrief(proj).subscribe({
       next: (res) => {
@@ -43,7 +45,9 @@ export class AiProposalViewComponent {
             p.aiProposal = res.brief;
             return p;
           });
+          return;
         }
+        this.aiError.set(res.error || 'Offline or AI unavailable — audio/data saved locally.');
       },
       error: (err) => {
         this.isGenerating.set(false);
@@ -75,16 +79,19 @@ export class AiProposalViewComponent {
     this.aiService.askConsultantQA(q, context).subscribe({
       next: (res) => {
         this.isAskingQA.set(false);
-        this.qaHistory.update((h) => [...h, { role: 'assistant', text: res.answer }]);
+        this.qaHistory.update((h) => [
+          ...h,
+          {
+            role: 'assistant',
+            text: res.success && res.answer ? res.answer : (res.error || 'Offline or AI unavailable — audio/data saved locally.'),
+          },
+        ]);
       },
       error: () => {
         this.isAskingQA.set(false);
         this.qaHistory.update((h) => [
           ...h,
-          {
-            role: 'assistant',
-            text: 'Standard building guidelines suggest maintaining a minimum 36" walkway for interior circulation and 42"-48" for two-cook kitchen aisles.',
-          },
+          { role: 'assistant', text: 'Offline or AI unavailable — audio/data saved locally.' },
         ]);
       },
     });

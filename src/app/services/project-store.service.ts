@@ -1,30 +1,41 @@
-import { Injectable, computed, effect, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
+  AudioNote,
   CanvasShape,
   MeasurementUnit,
   PRESET_MATERIALS,
   Project,
   Room,
   RoomDimensions,
+  RoomPhoto,
   WallSegment,
 } from '../models/project.model';
+import { dataUrlToBlob } from '../utils/data-url';
+import { MediaStorageService } from './media-storage.service';
 
 const STORAGE_KEY = 'design_consult_pro_projects_v2';
 const ACTIVE_PROJ_KEY = 'design_consult_pro_active_id';
 const UNIT_KEY = 'design_consult_pro_unit';
+const MM_PER_FOOT = 304.8;
+const MM_PER_INCH = 25.4;
+const SQ_M_PER_SQ_FT = 0.09290304;
+const PIXELS_PER_FOOT = 20;
+
+export type FieldTab = 'record' | 'measure' | 'photos' | 'site';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ProjectStore {
+  private media = inject(MediaStorageService);
   // Primary Signals
   readonly projects = signal<Project[]>([]);
   readonly activeProjectId = signal<string>('');
   readonly activeRoomId = signal<string>('');
   readonly isOnline = signal<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  readonly unit = signal<MeasurementUnit>('imperial');
+  readonly unit = signal<MeasurementUnit>('metric');
   readonly isGeneratingAi = signal<boolean>(false);
-  readonly currentActiveTab = signal<'dashboard' | 'survey' | 'measure' | 'conditions' | 'media' | 'ai' | 'report' | 'workspace'>('workspace');
+  readonly currentActiveTab = signal<FieldTab>('record');
 
   // Computed Selectors
   readonly activeProject = computed<Project | null>(() => {
@@ -72,7 +83,7 @@ export class ProjectStore {
       const currentUnit = this.unit();
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.persistableProjects(data)));
           if (activeId) localStorage.setItem(ACTIVE_PROJ_KEY, activeId);
           localStorage.setItem(UNIT_KEY, currentUnit);
         } catch (e) {
@@ -90,22 +101,25 @@ export class ProjectStore {
   }
 
   resetToDemoProject(): void {
+    this.unit.set('imperial');
     this.seedDemoProject();
   }
 
   private loadFromStorage(): void {
     if (typeof window === 'undefined' || !window.localStorage) {
-      this.seedDemoProject();
+      this.projects.set([]);
+      this.activeProjectId.set('');
+      this.activeRoomId.set('');
       return;
     }
 
     try {
       const savedUnit = localStorage.getItem(UNIT_KEY) as MeasurementUnit;
-      if (savedUnit) this.unit.set(savedUnit);
+      if (savedUnit === 'metric' || savedUnit === 'imperial') this.unit.set(savedUnit);
 
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed: Project[] = JSON.parse(raw);
+        const parsed: Project[] = this.remeasure(JSON.parse(raw), this.unit());
         if (Array.isArray(parsed) && parsed.length > 0) {
           this.projects.set(parsed);
           const savedActiveId = localStorage.getItem(ACTIVE_PROJ_KEY);
@@ -117,6 +131,7 @@ export class ProjectStore {
           if (this.activeProject()?.rooms.length) {
             this.activeRoomId.set(this.activeProject()!.rooms[0].id);
           }
+          void this.backfillMedia(parsed);
           return;
         }
       }
@@ -124,7 +139,83 @@ export class ProjectStore {
       console.warn('Failed to parse cached projects:', e);
     }
 
-    this.seedDemoProject();
+    this.projects.set([]);
+    this.activeProjectId.set('');
+    this.activeRoomId.set('');
+  }
+
+  /** Move legacy inline bytes into IndexedDB and rebuild playback URLs. */
+  private async backfillMedia(source: Project[]): Promise<void> {
+    try {
+      for (const project of source) {
+        for (const room of project.rooms || []) {
+          for (const photo of room.photos || []) {
+            if (photo.dataUrl?.startsWith('data:')) {
+              const id = photo.mediaId || photo.id;
+              await this.media.saveBlob(id, dataUrlToBlob(photo.dataUrl));
+              photo.mediaId = id;
+              photo.dataUrl = undefined;
+            }
+          }
+          for (const note of room.audioNotes || []) {
+            if (note.audioBase64) {
+              const id = note.mediaId || note.id;
+              await this.media.saveBlob(id, dataUrlToBlob(note.audioBase64));
+              note.mediaId = id;
+              note.audioBase64 = undefined;
+            }
+          }
+        }
+      }
+      await this.attachMediaUrls(source);
+      this.projects.set(source.map((project) => ({ ...project })));
+    } catch (error) {
+      console.warn('Media backfill failed:', error);
+    }
+  }
+
+  private async attachMediaUrls(projects: Project[]): Promise<void> {
+    for (const project of projects) {
+      for (const room of project.rooms || []) {
+        for (const photo of room.photos || []) {
+          if (!photo.mediaId) continue;
+          if (photo.dataUrl && !photo.dataUrl.startsWith('blob:') && !photo.dataUrl.startsWith('data:')) continue;
+          const blob = await this.media.getBlob(photo.mediaId);
+          if (blob) photo.dataUrl = URL.createObjectURL(blob);
+        }
+        for (const note of room.audioNotes || []) {
+          if (!note.mediaId) continue;
+          const blob = await this.media.getBlob(note.mediaId);
+          if (blob) note.audioBlobUrl = URL.createObjectURL(blob);
+        }
+      }
+    }
+  }
+
+  private persistableProjects(projects: Project[]): Project[] {
+    return projects.map((project) => ({
+      ...project,
+      rooms: (project.rooms || []).map((room) => ({
+        ...room,
+        photos: (room.photos || []).map((photo) => this.persistablePhoto(photo)),
+        audioNotes: (room.audioNotes || []).map((note) => this.persistableNote(note)),
+      })),
+    }));
+  }
+
+  private persistablePhoto(photo: RoomPhoto): RoomPhoto {
+    const copy: RoomPhoto = { ...photo };
+    if (!copy.dataUrl || copy.dataUrl.startsWith('data:') || copy.dataUrl.startsWith('blob:')) {
+      delete copy.dataUrl;
+    }
+    return copy;
+  }
+
+  private persistableNote(note: AudioNote): AudioNote {
+    const copy: AudioNote = { ...note };
+    delete copy.audioBase64;
+    delete copy.audioBlobUrl;
+    return copy;
   }
 
   private seedDemoProject(): void {
@@ -141,64 +232,64 @@ export class ProjectStore {
    */
   calculateRoomMetrics(
     walls: WallSegment[],
-    ceilingHeightFt: number,
+    ceilingHeight: number,
     openings: { widthInches: number; heightInches: number }[] = [],
     diagAC?: number,
     diagBD?: number,
-    unit: MeasurementUnit = 'imperial'
+    unit: MeasurementUnit = 'imperial',
+    polygon?: { x: number; y: number }[]
   ): RoomDimensions {
-    let perimeter = 0;
-    walls.forEach((w) => {
-      perimeter += Number(w.lengthFt) || 0;
-    });
+    const toFeet = (value: number) => (unit === 'metric' ? value / MM_PER_FOOT : value);
+    let floorAreaFt = 0;
+    let perimeterFt = 0;
 
-    let floorArea = 0;
-    if (walls.length === 4) {
-      // 4-wall rectangle / polygon approximation
-      const l1 = walls[0]?.lengthFt || 0;
-      const w1 = walls[1]?.lengthFt || 0;
-      const l2 = walls[2]?.lengthFt || 0;
-      const w2 = walls[3]?.lengthFt || 0;
-      floorArea = ((l1 + l2) / 2) * ((w1 + w2) / 2);
-    } else if (walls.length >= 3) {
-      // General polygon perimeter based estimate
-      const avgSide = perimeter / walls.length;
-      floorArea = Math.pow(avgSide, 2) * (walls.length / (4 * Math.tan(Math.PI / walls.length)));
-    }
-
-    // Gross Wall Area
-    const grossWallArea = perimeter * (Number(ceilingHeightFt) || 9);
-
-    // Openings area in sq ft
-    const openingsSqFt = openings.reduce((sum, o) => {
-      const wFt = (o.widthInches || 0) / 12;
-      const hFt = (o.heightInches || 0) / 12;
-      return sum + wFt * hFt;
-    }, 0);
-
-    const netWallSurface = Math.max(0, grossWallArea - openingsSqFt);
-    const volume = floorArea * (Number(ceilingHeightFt) || 9);
-
-    // Diagonal Squareness check for 4-wall rooms
-    let isSquare = true;
-    let diagonalDifferenceInches = 0;
-    if (walls.length === 4 && diagAC && diagBD) {
-      const diffFt = Math.abs(diagAC - diagBD);
-      diagonalDifferenceInches = Math.round(diffFt * 12 * 10) / 10;
-      // If diagonal difference exceeds 0.5 inches over 10ft, flagged out of square
-      isSquare = diagonalDifferenceInches <= 0.5;
-    } else if (walls.length === 4 && walls[0] && walls[1]) {
-      // Theoretical diagonal = sqrt(L^2 + W^2)
-      const theoDiag = Math.sqrt(Math.pow(walls[0].lengthFt, 2) + Math.pow(walls[1].lengthFt, 2));
-      if (diagAC) {
-        diagonalDifferenceInches = Math.round(Math.abs(diagAC - theoDiag) * 12 * 10) / 10;
-        isSquare = diagonalDifferenceInches <= 0.5;
+    if (polygon && polygon.length >= 3) {
+      let twiceArea = 0;
+      for (let i = 0; i < polygon.length; i++) {
+        const a = polygon[i];
+        const b = polygon[(i + 1) % polygon.length];
+        twiceArea += a.x * b.y - b.x * a.y;
+        perimeterFt += Math.hypot(b.x - a.x, b.y - a.y) / PIXELS_PER_FOOT;
+      }
+      floorAreaFt = Math.abs(twiceArea) / 2 / (PIXELS_PER_FOOT * PIXELS_PER_FOOT);
+    } else {
+      walls.forEach((w) => {
+        perimeterFt += toFeet(Number(w.lengthFt) || 0);
+      });
+      if (walls.length >= 2) {
+        const l1 = toFeet(walls[0]?.lengthFt || 0);
+        const w1 = toFeet(walls[1]?.lengthFt || 0);
+        const l2 = toFeet(walls[2]?.lengthFt || l1);
+        const w2 = toFeet(walls[3]?.lengthFt || w1);
+        floorAreaFt = ((l1 + l2) / 2) * ((w1 + w2) / 2);
       }
     }
 
+    const ceilingFt = toFeet(Number(ceilingHeight) || (unit === 'metric' ? 2896 : 9));
+    const openingsSqFt = openings.reduce((sum, opening) => {
+      const widthFt = unit === 'metric' ? (opening.widthInches || 0) / 1000 / 0.3048 : (opening.widthInches || 0) / 12;
+      const heightFt = unit === 'metric' ? (opening.heightInches || 0) / 1000 / 0.3048 : (opening.heightInches || 0) / 12;
+      return sum + widthFt * heightFt;
+    }, 0);
+    const netWallFt = Math.max(0, perimeterFt * ceilingFt - openingsSqFt);
+    const volumeFt = floorAreaFt * ceilingFt;
+
+    let isSquare = true;
+    let diagonalDifferenceInches = 0;
+    if (diagAC && diagBD) {
+      const diffFt = Math.abs(toFeet(diagAC) - toFeet(diagBD));
+      diagonalDifferenceInches = Math.round(diffFt * 12 * 10) / 10;
+      isSquare = diagonalDifferenceInches <= 0.5;
+    }
+
+    const floorArea = unit === 'metric' ? floorAreaFt * SQ_M_PER_SQ_FT : floorAreaFt;
+    const perimeter = unit === 'metric' ? perimeterFt * 0.3048 : perimeterFt;
+    const wallSurface = unit === 'metric' ? netWallFt * SQ_M_PER_SQ_FT : netWallFt;
+    const volume = unit === 'metric' ? volumeFt * 0.0283168 : volumeFt;
+
     return {
       unit,
-      ceilingHeightFt: Number(ceilingHeightFt) || 9,
+      ceilingHeightFt: Number(ceilingHeight) || (unit === 'metric' ? 2896 : 9),
       walls,
       diagonalACFt: diagAC,
       diagonalBDFt: diagBD,
@@ -206,7 +297,7 @@ export class ProjectStore {
       diagonalDifferenceInches,
       calculatedFloorArea: Math.round(floorArea * 100) / 100,
       calculatedPerimeter: Math.round(perimeter * 100) / 100,
-      calculatedWallSurface: Math.round(netWallSurface * 100) / 100,
+      calculatedWallSurface: Math.round(wallSurface * 100) / 100,
       calculatedVolume: Math.round(volume * 100) / 100,
     };
   }
@@ -226,11 +317,70 @@ export class ProjectStore {
   }
 
   setUnit(unit: MeasurementUnit): void {
+    const current = this.unit();
+    if (unit === current) return;
+    const lengthFactor = unit === 'metric' ? MM_PER_FOOT : 1 / MM_PER_FOOT;
+    const inchFactor = unit === 'metric' ? MM_PER_INCH : 1 / MM_PER_INCH;
+    const converted = this.projects().map((project) => ({
+      ...project,
+      rooms: project.rooms.map((room) => {
+        const next: Room = JSON.parse(JSON.stringify(room));
+        next.dimensions.ceilingHeightFt = this.scaleNumber(next.dimensions.ceilingHeightFt, lengthFactor);
+        if (next.dimensions.diagonalACFt) next.dimensions.diagonalACFt = this.scaleNumber(next.dimensions.diagonalACFt, lengthFactor);
+        if (next.dimensions.diagonalBDFt) next.dimensions.diagonalBDFt = this.scaleNumber(next.dimensions.diagonalBDFt, lengthFactor);
+        next.dimensions.walls = next.dimensions.walls.map((wall) => ({
+          ...wall,
+          lengthFt: this.scaleNumber(wall.lengthFt, lengthFactor),
+          heightFt: this.scaleNumber(wall.heightFt, lengthFactor),
+        }));
+        next.openings = (next.openings || []).map((opening) => ({
+          ...opening,
+          widthInches: this.scaleNumber(opening.widthInches, inchFactor),
+          heightInches: this.scaleNumber(opening.heightInches, inchFactor),
+          sillHeightInches: this.scaleNumber(opening.sillHeightInches, inchFactor),
+          trimWidthInches: this.scaleNumber(opening.trimWidthInches, inchFactor),
+        }));
+        next.features = (next.features || []).map((feature) => ({
+          ...feature,
+          distanceAlongWallFt: this.scaleNumber(feature.distanceAlongWallFt, lengthFactor),
+          heightFromFloorInches: this.scaleNumber(feature.heightFromFloorInches, inchFactor),
+        }));
+        const polygon = next.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly')?.points;
+        next.dimensions = this.calculateRoomMetrics(
+          next.dimensions.walls,
+          next.dimensions.ceilingHeightFt,
+          next.openings,
+          next.dimensions.diagonalACFt,
+          next.dimensions.diagonalBDFt,
+          unit,
+          polygon
+        );
+        return next;
+      }),
+    }));
+    this.projects.set(converted);
     this.unit.set(unit);
   }
 
-  setTab(tab: 'dashboard' | 'survey' | 'measure' | 'conditions' | 'media' | 'ai' | 'report' | 'workspace'): void {
-    this.currentActiveTab.set(tab);
+  setTab(tab: string): void {
+    const mapped: Record<string, FieldTab> = {
+      record: 'record',
+      measure: 'measure',
+      photos: 'photos',
+      site: 'site',
+      workspace: 'record',
+      dashboard: 'record',
+      survey: 'site',
+      conditions: 'site',
+      media: 'photos',
+      ai: 'record',
+      report: 'site',
+    };
+    this.currentActiveTab.set(mapped[tab] || 'record');
+  }
+
+  private scaleNumber(value: number, factor: number): number {
+    return Math.round((Number(value) || 0) * factor * 10) / 10;
   }
 
   createProject(partial: Partial<Project>): Project {
@@ -300,6 +450,7 @@ export class ProjectStore {
         clientGeneralNotes: 'Prioritize low-VOC sustainable materials, custom flush cabinetry, and concealed wire management.',
       },
       rooms: [defaultRoom],
+      actionItems: [],
     };
 
     this.projects.update((list) => [newProj, ...list]);
@@ -337,6 +488,7 @@ export class ProjectStore {
   deleteProject(id: string): void {
     const list = this.projects().filter((p) => p.id !== id);
     if (list.length === 0) {
+      this.unit.set('imperial');
       const seeded = this.createSeedProject();
       this.projects.set([seeded]);
       this.activeProjectId.set(seeded.id);
@@ -372,15 +524,15 @@ export class ProjectStore {
     if (!proj || !currentRoom) return;
 
     const modified = updater(JSON.parse(JSON.stringify(currentRoom)));
-    
-    // Auto-recalculate dimensions
+    const polygon = modified.canvasSketch?.shapes?.find((shape: CanvasShape) => shape.type === 'wall_poly')?.points;
     modified.dimensions = this.calculateRoomMetrics(
       modified.dimensions.walls,
       modified.dimensions.ceilingHeightFt,
       modified.openings,
       modified.dimensions.diagonalACFt,
       modified.dimensions.diagonalBDFt,
-      this.unit()
+      this.unit(),
+      polygon
     );
 
     const updatedRooms = proj.rooms.map((r) => (r.id === modified.id ? modified : r));
@@ -400,6 +552,80 @@ export class ProjectStore {
       rooms: remaining,
     });
     this.activeRoomId.set(remaining[0].id);
+  }
+
+  private remeasure(projects: Project[], unit: MeasurementUnit): Project[] {
+    if (!Array.isArray(projects)) return [];
+    return projects.map((project) => ({
+      ...project,
+      actionItems: project.actionItems || [],
+      rooms: (project.rooms || []).map((room) => {
+        const next: Room = JSON.parse(JSON.stringify(room));
+        if (!next.dimensions?.walls) return next;
+        const polygon = next.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly')?.points;
+        const toFeet = (value: number) => (unit === 'metric' ? value / MM_PER_FOOT : value);
+        if (polygon && polygon.length === 4 && next.dimensions.walls.length >= 2) {
+          let twice = 0;
+          for (let i = 0; i < polygon.length; i++) {
+            const a = polygon[i];
+            const b = polygon[(i + 1) % polygon.length];
+            twice += a.x * b.y - b.x * a.y;
+          }
+          const sketchFt = Math.abs(twice) / 2 / (PIXELS_PER_FOOT * PIXELS_PER_FOOT);
+          const scheduleFt = toFeet(next.dimensions.walls[0].lengthFt) * toFeet(next.dimensions.walls[1].lengthFt);
+          if (scheduleFt > 0 && Math.abs(sketchFt - scheduleFt) / scheduleFt > 0.15) {
+            this.alignRectangleSketch(next, unit);
+          }
+        }
+        const points = next.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly')?.points;
+        next.dimensions = this.calculateRoomMetrics(
+          next.dimensions.walls,
+          next.dimensions.ceilingHeightFt,
+          next.openings || [],
+          next.dimensions.diagonalACFt,
+          next.dimensions.diagonalBDFt,
+          unit,
+          points
+        );
+        return next;
+      }),
+    }));
+  }
+
+  /** Axis-align a four-corner sketch to the first two wall lengths so area matches the schedule. */
+  private alignRectangleSketch(room: Room, unit: MeasurementUnit): void {
+    const poly = room.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly');
+    if (!poly?.points || poly.points.length !== 4 || room.dimensions.walls.length < 2) return;
+    const toFeet = (value: number) => (unit === 'metric' ? value / MM_PER_FOOT : value);
+    const origin = poly.points[0];
+    const widthPx = toFeet(room.dimensions.walls[0].lengthFt) * PIXELS_PER_FOOT;
+    const depthPx = toFeet(room.dimensions.walls[1].lengthFt) * PIXELS_PER_FOOT;
+    poly.points = [
+      { x: origin.x, y: origin.y },
+      { x: origin.x + widthPx, y: origin.y },
+      { x: origin.x + widthPx, y: origin.y + depthPx },
+      { x: origin.x, y: origin.y + depthPx },
+    ];
+  }
+
+  /** Keep one polygon edge the same length as the edited wall schedule row. */
+  stretchWallEdge(room: Room, wallIndex: number, storedLength: number): void {
+    const poly = room.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly');
+    const points = poly?.points;
+    if (!points || points.length < 2 || wallIndex < 0 || wallIndex >= points.length) return;
+    const start = points[wallIndex];
+    const end = points[(wallIndex + 1) % points.length];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const current = Math.hypot(dx, dy) || 1;
+    const feet = this.unit() === 'metric' ? storedLength / MM_PER_FOOT : storedLength;
+    const targetPx = Math.max(PIXELS_PER_FOOT, feet * PIXELS_PER_FOOT);
+    const scale = targetPx / current;
+    const shiftX = start.x + dx * scale - end.x;
+    const shiftY = start.y + dy * scale - end.y;
+    for (let index = wallIndex + 1; index < points.length; index++) {
+      points[index] = { x: points[index].x + shiftX, y: points[index].y + shiftY };
+    }
   }
 
   // --- Helper Room Factory ---
@@ -521,7 +747,16 @@ export class ProjectStore {
       ];
     }
 
-    const calculated = this.calculateRoomMetrics(walls, 9.5, [], 23.4, 23.4, 'imperial');
+    const unit = this.unit();
+    if (unit === 'metric') {
+      walls.forEach((wall) => {
+        wall.lengthFt = Math.round(wall.lengthFt * MM_PER_FOOT);
+        wall.heightFt = Math.round(wall.heightFt * MM_PER_FOOT);
+      });
+    }
+    const polygon = shapes.find((shape) => shape.type === 'wall_poly')?.points;
+    const ceiling = unit === 'metric' ? Math.round(9.5 * MM_PER_FOOT) : 9.5;
+    const calculated = this.calculateRoomMetrics(walls, ceiling, [], undefined, undefined, unit, polygon);
 
     return {
       id: roomId,
@@ -673,6 +908,19 @@ export class ProjectStore {
       10.0,
       'imperial'
     );
+    for (const room of [room1, room2, room3]) {
+      this.alignRectangleSketch(room, 'imperial');
+      const polygon = room.canvasSketch?.shapes?.find((shape) => shape.type === 'wall_poly')?.points;
+      room.dimensions = this.calculateRoomMetrics(
+        room.dimensions.walls,
+        room.dimensions.ceilingHeightFt,
+        room.openings,
+        room.dimensions.diagonalACFt,
+        room.dimensions.diagonalBDFt,
+        'imperial',
+        polygon
+      );
+    }
 
     return {
       id: 'proj_mercer_penthouse',
@@ -747,6 +995,7 @@ export class ProjectStore {
         clientGeneralNotes: 'Clients desire tactile organic minimalism: integrated sub-zero appliances, honed travertine island with 3" mitered waterfall edge, and seamless flush baseboards.',
       },
       rooms: [room1, room2, room3],
+      actionItems: [],
     };
   }
 

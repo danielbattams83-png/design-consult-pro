@@ -2,16 +2,14 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { HeaderComponent } from './components/header/header';
+import { RecordingBarComponent } from './components/audio-recorder/recording-bar';
+import { PhotoAnnotatorComponent } from './components/photo-annotator/photo-annotator';
 import { AuthService } from './services/auth.service';
-import { ProjectStore } from './services/project-store.service';
-import { DashboardComponent } from './views/dashboard/dashboard';
-import { AiProposalViewComponent } from './views/ai-proposal-view/ai-proposal-view';
-import { ConditionsViewComponent } from './views/conditions-view/conditions-view';
+import { ExportPackageService } from './services/export-package.service';
+import { FieldTab, ProjectStore } from './services/project-store.service';
 import { MeasureViewComponent } from './views/measure-view/measure-view';
-import { MediaViewComponent } from './views/media-view/media-view';
-import { ReportViewComponent } from './views/report-view/report-view';
-import { SurveyViewComponent } from './views/survey-view/survey-view';
-import { ProjectWorkspaceComponent } from './components/project-workspace/project-workspace.component';
+import { RecordViewComponent } from './views/record-view/record-view';
+import { SiteBriefViewComponent } from './views/site-brief-view/site-brief-view';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,37 +18,46 @@ import { ProjectWorkspaceComponent } from './components/project-workspace/projec
     CommonModule,
     MatIconModule,
     HeaderComponent,
-    DashboardComponent,
+    RecordingBarComponent,
+    PhotoAnnotatorComponent,
     MeasureViewComponent,
-    SurveyViewComponent,
-    ConditionsViewComponent,
-    MediaViewComponent,
-    AiProposalViewComponent,
-    ReportViewComponent,
-    ProjectWorkspaceComponent,
+    RecordViewComponent,
+    SiteBriefViewComponent,
   ],
   templateUrl: './app.html',
 })
 export class App {
   auth = inject(AuthService);
   store = inject(ProjectStore);
+  private packages = inject(ExportPackageService);
 
   activeTab = this.store.currentActiveTab;
+  readonly isGlobalSettingsOpen = signal(false);
+  readonly exportMessage = signal<string | null>(null);
 
-  // Settings Modal State for Global Mobile Navigation
-  readonly isGlobalSettingsOpen = signal<boolean>(false);
-
-  setTab(tab: 'dashboard' | 'survey' | 'measure' | 'conditions' | 'media' | 'ai' | 'report' | 'workspace'): void {
+  setTab(tab: FieldTab): void {
     this.store.setTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  toggleGlobalSettings(): void {
-    this.isGlobalSettingsOpen.update((v) => !v);
-  }
-
   exportData(): void {
     this.store.exportAllProjectsJson();
+  }
+
+  async exportConceptPackage(): Promise<void> {
+    const project = this.store.activeProject();
+    if (!project) {
+      this.exportMessage.set('Open a project before exporting a concept package.');
+      return;
+    }
+    this.exportMessage.set('Packing drawings, photos, and the brief…');
+    try {
+      await this.packages.exportConceptPackage(project);
+      this.exportMessage.set('Concept package downloaded.');
+    } catch (error) {
+      console.error(error);
+      this.exportMessage.set('The concept package could not be built on this device.');
+    }
   }
 
   resetDemoData(): void {

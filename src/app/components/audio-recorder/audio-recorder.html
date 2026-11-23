@@ -5,92 +5,59 @@
         <mat-icon class="text-[18px] w-[18px] h-[18px]">mic</mat-icon>
       </div>
       <div>
-        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">On-Site Voice Memos & Field Dictation</h4>
-        <p class="text-[11px] text-slate-500">Record spoken walkthrough observations with automated AI transcription.</p>
+        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Walkthrough recorder</h4>
+        <p class="text-[11px] text-slate-500">Keeps recording while you switch tabs. Transcripts stay editable.</p>
       </div>
     </div>
-
-    <!-- Record Trigger Button -->
-    <div class="flex items-center gap-2">
-      @if (!isRecording()) {
-        <button
-          type="button"
-          id="start-recording-btn"
-          (click)="startRecording()"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer"
-        >
-          <mat-icon class="text-[16px] w-[16px] h-[16px]">mic</mat-icon>
-          <span>Record Note</span>
-        </button>
-      } @else {
-        <button
-          type="button"
-          id="stop-recording-btn"
-          (click)="stopRecording()"
-          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-md animate-pulse transition-all cursor-pointer"
-        >
-          <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
-          <span>Stop ({{ formatTime(recordingSeconds()) }})</span>
-        </button>
-      }
-
+    @if (session.status() === 'idle') {
       <button
         type="button"
-        (click)="addDemoVoiceNote()"
-        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
-        title="Quick log sample note"
+        id="start-recording-btn"
+        (click)="startRecording()"
+        class="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg cursor-pointer"
       >
-        + Quick Note
+        <mat-icon class="text-[18px] w-[18px] h-[18px]">mic</mat-icon>
+        <span>Record</span>
       </button>
-    </div>
+    }
   </div>
 
-  <!-- Voice Notes List -->
+  @if (session.micError()) {
+    <p class="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800" role="alert">{{ session.micError() }}</p>
+  }
+
   @if (activeRoom()?.audioNotes?.length) {
-    <div class="space-y-2 mt-3 max-h-48 overflow-y-auto pr-1">
+    <div class="space-y-2 mt-3">
       @for (note of activeRoom()?.audioNotes; track note.id) {
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
           <div class="flex items-center justify-between gap-2 mb-1.5">
-            <div class="flex items-center gap-2 font-bold text-slate-900">
-              <mat-icon class="text-orange-600 text-[16px] w-[16px] h-[16px]">graphic_eq</mat-icon>
-              <span>{{ note.title }}</span>
-              <span class="text-[10px] font-mono-digits font-normal text-slate-400">({{ note.durationSeconds }}s)</span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] text-slate-400">{{ note.recordedAt | date:'shortTime' }}</span>
-              <button
-                type="button"
-                (click)="deleteAudioNote(note.id)"
-                class="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                title="Delete voice note"
-              >
-                <mat-icon class="text-[15px] w-[15px] h-[15px]">delete</mat-icon>
-              </button>
-            </div>
+            <div class="font-bold text-slate-900">{{ note.title }} <span class="font-normal text-slate-400">({{ note.durationSeconds }}s)</span></div>
+            <button type="button" (click)="deleteAudioNote(note.id)" class="min-h-[44px] min-w-[44px] text-slate-400 hover:text-rose-600 cursor-pointer" title="Delete voice note">
+              <mat-icon class="text-[18px] w-[18px] h-[18px]">delete</mat-icon>
+            </button>
           </div>
-
-          <!-- Audio Player if URL available -->
           @if (note.audioBlobUrl) {
-            <div class="my-2">
-              <audio [src]="note.audioBlobUrl" controls class="w-full h-7 rounded"></audio>
+            <audio [src]="note.audioBlobUrl" controls class="w-full h-8"></audio>
+          }
+          @if (note.markers?.length) {
+            <div class="mt-2 flex flex-wrap gap-1">
+              @for (marker of note.markers; track marker.timeSeconds + marker.tag) {
+                <span class="rounded-full bg-orange-100 px-2 py-1 text-[10px] font-bold text-orange-800">{{ session.markerLine(marker) }}</span>
+              }
             </div>
           }
-
-          <!-- AI Transcription -->
-          <div class="p-2 bg-white rounded-lg border border-slate-200/80 text-slate-700 leading-relaxed">
-            <div class="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-              <mat-icon class="text-[12px] w-[12px] h-[12px]">auto_awesome</mat-icon>
-              <span>Field Transcription</span>
-            </div>
-            <p class="italic text-slate-800">{{ note.transcription }}</p>
-          </div>
+          <label class="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500" [for]="'transcript-' + note.id">Transcript</label>
+          <textarea
+            [id]="'transcript-' + note.id"
+            rows="3"
+            class="mt-1 w-full min-h-[44px] rounded-lg border border-slate-300 bg-white p-2 text-xs"
+            [ngModel]="note.transcription"
+            (ngModelChange)="updateTranscription(note.id, $event)"
+          ></textarea>
         </div>
       }
     </div>
   } @else {
-    <p class="text-xs text-slate-400 italic mt-3 text-center py-2">
-      No voice notes recorded for {{ activeRoom()?.name }} yet. Tap "Record Note" above to dictate on-site measurements and contractor instructions.
-    </p>
+    <p class="mt-3 text-xs text-slate-500">No voice notes for {{ activeRoom()?.name || 'this room' }} yet.</p>
   }
 </div>

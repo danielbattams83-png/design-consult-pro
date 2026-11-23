@@ -1,0 +1,30 @@
+<div class="space-y-6">
+  <app-survey-view></app-survey-view>
+  <app-conditions-view></app-conditions-view>
+  <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+    <h2 class="text-sm font-bold text-slate-900">Action items</h2>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <input
+        class="min-h-[44px] flex-1 rounded-xl border border-slate-300 px-3 text-sm"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        (keyup.enter)="addItem()"
+        placeholder="Add a site action"
+      />
+      <button type="button" (click)="addItem()" class="min-h-[44px] rounded-xl bg-slate-900 px-4 text-xs font-bold text-white cursor-pointer">Add</button>
+    </div>
+    <ul class="space-y-2">
+      @for (item of store.activeProject()?.actionItems || []; track item.id) {
+        <li class="flex items-center gap-2 rounded-xl border border-slate-200 px-2 py-1">
+          <button type="button" (click)="toggle(item.id)" class="min-h-[44px] min-w-[44px] cursor-pointer" [attr.aria-pressed]="item.completed">
+            <mat-icon class="text-[20px]">{{ item.completed ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+          </button>
+          <span class="flex-1 text-sm" [class.line-through]="item.completed" [class.text-slate-400]="item.completed">{{ item.text }}</span>
+          <button type="button" (click)="remove(item.id)" class="min-h-[44px] min-w-[44px] text-slate-400 cursor-pointer" title="Delete action">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+</div>

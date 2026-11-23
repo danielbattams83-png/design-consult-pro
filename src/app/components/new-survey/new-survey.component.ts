@@ -17,7 +17,6 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { Project, ProjectStatus } from '../../models/project.model';
 import { ProjectStore } from '../../services/project-store.service';
-import { SurveyDataService } from '../../services/survey-data.service';
 
 export interface NewSurveyFormData {
   projectName: string;
@@ -42,7 +41,6 @@ export interface NewSurveyFormData {
 })
 export class NewSurveyComponent implements OnInit {
   private readonly store = inject(ProjectStore);
-  private readonly surveyService = inject(SurveyDataService);
 
   // Optional Inputs
   readonly initialData = input<Partial<Project> | null>(null);

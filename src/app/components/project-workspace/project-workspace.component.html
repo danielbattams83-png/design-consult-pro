@@ -106,159 +106,12 @@
         </div>
       </div>
     </div>
-  }
-
-  <!-- ============================================================== -->
-  <!-- 2. HORIZONTALLY SCROLLABLE ACTION BAR -->
-  <!-- ============================================================== -->
-  <div class="relative -mx-3 px-3 sm:mx-0 sm:px-0">
-    <div
-      class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth"
-      role="tablist"
-      aria-label="Workspace Sections"
-    >
-      <!-- Pill 1: Recording -->
-      <button
-        type="button"
-        id="action-pill-recording"
-        (click)="selectSubTab('recording')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'recording'"
-        [class.text-white]="activeSubTab() === 'recording'"
-        [class.border-slate-900]="activeSubTab() === 'recording'"
-        [class.shadow-sm]="activeSubTab() === 'recording'"
-        [class.bg-white]="activeSubTab() !== 'recording'"
-        [class.text-slate-700]="activeSubTab() !== 'recording'"
-        [class.border-slate-200]="activeSubTab() !== 'recording'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'recording'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'recording'">mic</mat-icon>
-        <span>Recording</span>
-      </button>
-
-      <!-- Pill 2: Floorplan -->
-      <button
-        type="button"
-        id="action-pill-floorplan"
-        (click)="selectSubTab('floorplan')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'floorplan'"
-        [class.text-white]="activeSubTab() === 'floorplan'"
-        [class.border-slate-900]="activeSubTab() === 'floorplan'"
-        [class.shadow-sm]="activeSubTab() === 'floorplan'"
-        [class.bg-white]="activeSubTab() !== 'floorplan'"
-        [class.text-slate-700]="activeSubTab() !== 'floorplan'"
-        [class.border-slate-200]="activeSubTab() !== 'floorplan'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'floorplan'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'floorplan'">straighten</mat-icon>
-        <span>Floorplan</span>
-      </button>
-
-      <!-- Pill 3: Photos -->
-      <button
-        type="button"
-        id="action-pill-photos"
-        (click)="selectSubTab('photos')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'photos'"
-        [class.text-white]="activeSubTab() === 'photos'"
-        [class.border-slate-900]="activeSubTab() === 'photos'"
-        [class.shadow-sm]="activeSubTab() === 'photos'"
-        [class.bg-white]="activeSubTab() !== 'photos'"
-        [class.text-slate-700]="activeSubTab() !== 'photos'"
-        [class.border-slate-200]="activeSubTab() !== 'photos'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'photos'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'photos'">photo_camera</mat-icon>
-        <span>Photos</span>
-        @if (activeRoom()?.photos?.length) {
-          <span class="px-1.5 py-0.2 rounded-full text-[10px]" [class.bg-orange-500]="activeSubTab() === 'photos'" [class.text-white]="activeSubTab() === 'photos'" [class.bg-slate-100]="activeSubTab() !== 'photos'" [class.text-slate-700]="activeSubTab() !== 'photos'">
-            {{ activeRoom()?.photos?.length }}
-          </span>
-        }
-      </button>
-
-      <!-- Pill 4: Actions -->
-      <button
-        type="button"
-        id="action-pill-actions"
-        (click)="selectSubTab('actions')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'actions'"
-        [class.text-white]="activeSubTab() === 'actions'"
-        [class.border-slate-900]="activeSubTab() === 'actions'"
-        [class.shadow-sm]="activeSubTab() === 'actions'"
-        [class.bg-white]="activeSubTab() !== 'actions'"
-        [class.text-slate-700]="activeSubTab() !== 'actions'"
-        [class.border-slate-200]="activeSubTab() !== 'actions'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'actions'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'actions'">checklist</mat-icon>
-        <span>Actions</span>
-        <span class="px-1.5 py-0.2 rounded-full text-[10px]" [class.bg-orange-500]="activeSubTab() === 'actions'" [class.text-white]="activeSubTab() === 'actions'" [class.bg-slate-100]="activeSubTab() !== 'actions'" [class.text-slate-700]="activeSubTab() !== 'actions'">
-          {{ actionItems().length }}
-        </span>
-      </button>
-
-      <!-- Pill 5: AI Analysis -->
-      <button
-        type="button"
-        id="action-pill-ai"
-        (click)="selectSubTab('ai')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'ai'"
-        [class.text-white]="activeSubTab() === 'ai'"
-        [class.border-slate-900]="activeSubTab() === 'ai'"
-        [class.shadow-sm]="activeSubTab() === 'ai'"
-        [class.bg-white]="activeSubTab() !== 'ai'"
-        [class.text-slate-700]="activeSubTab() !== 'ai'"
-        [class.border-slate-200]="activeSubTab() !== 'ai'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'ai'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'ai'">auto_awesome</mat-icon>
-        <span>AI Analysis</span>
-      </button>
-
-      <!-- Pill 6: Report -->
-      <button
-        type="button"
-        id="action-pill-report"
-        (click)="selectSubTab('report')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'report'"
-        [class.text-white]="activeSubTab() === 'report'"
-        [class.border-slate-900]="activeSubTab() === 'report'"
-        [class.shadow-sm]="activeSubTab() === 'report'"
-        [class.bg-white]="activeSubTab() !== 'report'"
-        [class.text-slate-700]="activeSubTab() !== 'report'"
-        [class.border-slate-200]="activeSubTab() !== 'report'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'report'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'report'">picture_as_pdf</mat-icon>
-        <span>Report</span>
-      </button>
-
-      <!-- Pill 7: Proposal -->
-      <button
-        type="button"
-        id="action-pill-proposal"
-        (click)="selectSubTab('proposal')"
-        class="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border"
-        [class.bg-slate-900]="activeSubTab() === 'proposal'"
-        [class.text-white]="activeSubTab() === 'proposal'"
-        [class.border-slate-900]="activeSubTab() === 'proposal'"
-        [class.shadow-sm]="activeSubTab() === 'proposal'"
-        [class.bg-white]="activeSubTab() !== 'proposal'"
-        [class.text-slate-700]="activeSubTab() !== 'proposal'"
-        [class.border-slate-200]="activeSubTab() !== 'proposal'"
-        [class.hover:bg-slate-50]="activeSubTab() !== 'proposal'"
-      >
-        <mat-icon class="text-[18px] w-[18px] h-[18px]" [class.text-orange-400]="activeSubTab() === 'proposal'">request_quote</mat-icon>
-        <span>Proposal</span>
-      </button>
+  } @else {
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs text-center space-y-2">
+      <h2 class="text-base font-bold text-slate-900">No project on this device</h2>
+      <p class="text-sm text-slate-600">Create a site survey from the project menu in the header, or open Settings and choose Load Demo Project.</p>
     </div>
-  </div>
+  }
 
   <!-- ============================================================== -->
   <!-- 3. PROPERTY QUICK-ACTIONS (Full-Width Mobile Buttons) -->
@@ -298,6 +151,13 @@
       }
     </button>
   </div>
+  @if (fieldError()) {
+    <p class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800" role="alert">{{ fieldError() }}</p>
+  }
+
+  @if (fieldError()) {
+    <p class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800" role="alert">{{ fieldError() }}</p>
+  }
 
   <!-- Hidden File Input for OCR Scan -->
   <input
@@ -324,125 +184,7 @@
   <!-- ============================================================== -->
   @if (activeSubTab() === 'recording') {
     <div class="space-y-4 animate-in fade-in duration-200">
-      <!-- 4A. Mobile Audio Recorder Component Card -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5 text-center">
-        <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-left">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
-              <mat-icon class="text-[18px] w-[18px] h-[18px]">mic</mat-icon>
-            </div>
-            <div>
-              <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Mobile On-Site Voice Recorder</h2>
-              <p class="text-[11px] text-slate-500">Dictate walkthrough notes with automatic AI transcription.</p>
-            </div>
-          </div>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" [class.bg-rose-100]="isRecording()" [class.text-rose-800]="isRecording()" [class.bg-slate-100]="!isRecording()" [class.text-slate-600]="!isRecording()">
-            {{ isRecording() ? 'LIVE RECORDING' : 'READY' }}
-          </span>
-        </div>
-
-        <!-- Large Digital Timer -->
-        <div class="py-2 space-y-1">
-          <div class="flex items-center justify-center gap-2">
-            @if (isRecording()) {
-              <span class="w-3 h-3 rounded-full bg-rose-600 animate-ping"></span>
-            }
-            <div class="text-4xl sm:text-5xl font-mono-digits font-black text-slate-900 tracking-tight">
-              {{ formatTimer(recordingSeconds()) }}
-            </div>
-          </div>
-          <p class="text-[11px] text-slate-500 font-medium">
-            {{ isRecording() ? 'Speaking into microphone... Tap button to finish' : 'Tap the microphone below to start dictating' }}
-          </p>
-        </div>
-
-        <!-- Simulated Visualizer Bars during recording -->
-        @if (isRecording()) {
-          <div class="flex items-center justify-center gap-1 h-6">
-            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.3"></span>
-            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.5"></span>
-            <span class="w-1 rounded-full bg-orange-600 transition-all duration-150" [style.height.px]="audioLevel() * 0.7"></span>
-            <span class="w-1 rounded-full bg-rose-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.4"></span>
-            <span class="w-1 rounded-full bg-orange-500 transition-all duration-150" [style.height.px]="audioLevel() * 0.6"></span>
-          </div>
-        }
-
-        <!-- Giant Circular Microphone Recording Button -->
-        <div class="flex flex-col items-center justify-center py-2">
-          <div class="relative">
-            <!-- Animated ripple ring when recording -->
-            @if (isRecording()) {
-              <div class="absolute -inset-3 rounded-full bg-rose-500/20 animate-ping"></div>
-              <div class="absolute -inset-6 rounded-full bg-orange-500/15 animate-pulse"></div>
-            }
-
-            <button
-              type="button"
-              id="giant-mic-record-btn"
-              (click)="toggleRecording()"
-              class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center shadow-xl transition-all cursor-pointer active:scale-95 select-none focus:outline-hidden"
-              [class.bg-rose-600]="isRecording()"
-              [class.hover:bg-rose-700]="isRecording()"
-              [class.bg-orange-600]="!isRecording()"
-              [class.hover:bg-orange-700]="!isRecording()"
-              [attr.aria-label]="isRecording() ? 'Stop Recording' : 'Start Voice Recording'"
-            >
-              @if (isRecording()) {
-                <mat-icon class="text-[36px] w-[36px] h-[36px] text-white">stop</mat-icon>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-white mt-1">STOP</span>
-              } @else {
-                <mat-icon class="text-[36px] w-[36px] h-[36px] text-white">mic</mat-icon>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-white mt-1">RECORD</span>
-              }
-            </button>
-          </div>
-        </div>
-
-        <!-- Recorded Voice Memos Stream -->
-        @if (activeRoom()?.audioNotes?.length) {
-          <div class="pt-3 border-t border-slate-100 text-left space-y-2.5">
-            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
-              <span>Recorded Memos ({{ activeRoom()?.audioNotes?.length }})</span>
-              <span class="text-[10px] text-slate-400 font-normal">Active Zone: {{ activeRoom()?.name }}</span>
-            </div>
-
-            <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
-              @for (note of activeRoom()?.audioNotes; track note.id) {
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 font-bold text-slate-900">
-                      <mat-icon class="text-orange-600 text-[16px] w-[16px] h-[16px]">graphic_eq</mat-icon>
-                      <span>{{ note.title }}</span>
-                      <span class="text-[10px] font-mono-digits font-normal text-slate-400">({{ note.durationSeconds }}s)</span>
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                      <span class="text-[10px] text-slate-400">{{ note.recordedAt | date:'shortTime' }}</span>
-                      <button
-                        type="button"
-                        (click)="deleteAudioNote(note.id)"
-                        class="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                        title="Delete memo"
-                      >
-                        <mat-icon class="text-[16px] w-[16px] h-[16px]">delete</mat-icon>
-                      </button>
-                    </div>
-                  </div>
-
-                  @if (note.audioBlobUrl) {
-                    <audio [src]="note.audioBlobUrl" controls class="w-full h-7 rounded"></audio>
-                  }
-
-                  <div class="p-2 bg-white rounded-lg border border-slate-200/80 text-[11px] text-slate-700 leading-relaxed">
-                    <span class="text-[10px] font-bold text-orange-600 uppercase tracking-wider block mb-0.5">AI Transcript:</span>
-                    <p class="italic text-slate-800">{{ note.transcription }}</p>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
+      <app-audio-recorder></app-audio-recorder>
 
       <!-- 4B. AI Meeting Summary Text Box Card -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
@@ -498,6 +240,9 @@
             <span>Generate with AI</span>
           }
         </button>
+        @if (summaryError()) {
+          <p class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800" role="alert">{{ summaryError() }}</p>
+        }
       </div>
     </div>
   }
@@ -586,7 +331,7 @@
                   <tr class="hover:bg-slate-50">
                     <td class="p-2.5 font-medium text-slate-900">{{ wall.name }}</td>
                     <td class="p-2.5 text-slate-600">{{ wall.orientation }}</td>
-                    <td class="p-2.5 font-bold font-mono-digits text-slate-900">{{ wall.lengthFt }} {{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</td>
+                    <td class="p-2.5 font-bold font-mono-digits text-slate-900">{{ wall.lengthFt }} {{ r.dimensions.unit === 'metric' ? 'mm' : 'ft' }}</td>
                     <td class="p-2.5 font-mono-digits text-slate-700">{{ wall.heightFt }} {{ r.dimensions.unit === 'metric' ? 'm' : 'ft' }}</td>
                   </tr>
                 }

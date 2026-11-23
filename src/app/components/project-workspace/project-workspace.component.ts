@@ -2,17 +2,20 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  OnDestroy,
   ViewChild,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { AudioNote, Project, RoomPhoto } from '../../models/project.model';
+import { ActionItem, Project, RoomPhoto } from '../../models/project.model';
+import { AudioRecorderComponent } from '../audio-recorder/audio-recorder';
 import { ProjectStore } from '../../services/project-store.service';
 import { AiConsultService } from '../../services/ai-consult.service';
+import { MediaStorageService } from '../../services/media-storage.service';
+import { compressImageFile } from '../../utils/image-compressor';
 
 export type WorkspaceSubTab =
   | 'recording'
@@ -23,23 +26,16 @@ export type WorkspaceSubTab =
   | 'report'
   | 'proposal';
 
-interface ActionItem {
-  id: string;
-  text: string;
-  category: 'Measurement' | 'Contractor' | 'Design' | 'Permit';
-  completed: boolean;
-  priority: 'high' | 'medium' | 'low';
-}
-
 @Component({
   selector: 'app-project-workspace',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, AudioRecorderComponent],
   templateUrl: './project-workspace.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectWorkspaceComponent implements OnDestroy {
+export class ProjectWorkspaceComponent {
   store = inject(ProjectStore);
   aiService = inject(AiConsultService);
+  private media = inject(MediaStorageService);
   private fb = inject(FormBuilder);
 
   // Active Data Selectors
@@ -80,61 +76,16 @@ export class ProjectWorkspaceComponent implements OnDestroy {
   readonly isOcrModalOpen = signal<boolean>(false);
   readonly ocrImagePreview = signal<string | null>(null);
 
-  // Audio Recording States
-  readonly isRecording = signal<boolean>(false);
-  readonly recordingSeconds = signal<number>(0);
-  readonly isTranscribing = signal<boolean>(false);
-  readonly audioLevel = signal<number>(0); // 0-100 for visualizer
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
-  private timerInterval: ReturnType<typeof setInterval> | null = null;
-  private audioLevelInterval: ReturnType<typeof setInterval> | null = null;
-
   // AI Meeting Summary States
   readonly isGeneratingSummary = signal<boolean>(false);
   readonly meetingSummaryText = signal<string>('');
+  readonly summaryError = signal<string | null>(null);
+  readonly fieldError = signal<string | null>(null);
   readonly isSummaryCopied = signal<boolean>(false);
 
-  // Action Items / Punch List State
-  readonly actionItems = signal<ActionItem[]>([
-    {
-      id: 'act_1',
-      text: 'Verify load-bearing center partition before drafting demolition plan',
-      category: 'Contractor',
-      completed: false,
-      priority: 'high',
-    },
-    {
-      id: 'act_2',
-      text: 'Confirm 200A electrical service panel breaker capacity for induction cooktop',
-      category: 'Contractor',
-      completed: false,
-      priority: 'high',
-    },
-    {
-      id: 'act_3',
-      text: 'Take laser measurements of corner diagonal AC & BD in Primary Suite',
-      category: 'Measurement',
-      completed: true,
-      priority: 'medium',
-    },
-    {
-      id: 'act_4',
-      text: 'Order 7" wide-plank European white oak finish samples for client review',
-      category: 'Design',
-      completed: false,
-      priority: 'medium',
-    },
-    {
-      id: 'act_5',
-      text: 'Check council setback rules for proposed rear sliding glass door expansion',
-      category: 'Permit',
-      completed: false,
-      priority: 'low',
-    },
-  ]);
+  readonly actionItems = computed(() => this.store.activeProject()?.actionItems || []);
   readonly newActionText = signal<string>('');
-  readonly newActionCategory = signal<'Measurement' | 'Contractor' | 'Design' | 'Permit'>('Design');
+  readonly newActionCategory = signal<ActionItem['category']>('Design');
 
   @ViewChild('ocrFileInput') ocrFileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('photoUploadInput') photoUploadInput!: ElementRef<HTMLInputElement>;
@@ -142,10 +93,6 @@ export class ProjectWorkspaceComponent implements OnDestroy {
   constructor() {
     this.initEditForm();
     this.initDefaultMeetingSummary();
-  }
-
-  ngOnDestroy(): void {
-    this.stopRecording();
   }
 
   private initEditForm(): void {
@@ -169,14 +116,8 @@ export class ProjectWorkspaceComponent implements OnDestroy {
   }
 
   private initDefaultMeetingSummary(): void {
-    const proj = this.activeProject();
-    if (proj?.survey?.clientGeneralNotes) {
-      this.meetingSummaryText.set(proj.survey.clientGeneralNotes);
-    } else {
-      this.meetingSummaryText.set(
-        `On-site client walkthrough notes for ${proj?.name || 'Site Survey'}.\n• Aesthetic focus: Natural white oak, travertine stone, warm neutral tones.\n• Spatial priorities: Open walkway clearances (min 36"), concealed cove lighting, and abundant natural daylight.\n• Lifestyle: Pet-friendly durable finishes and low-maintenance surfaces.`
-      );
-    }
+    const summary = this.activeProject()?.aiSummary;
+    this.meetingSummaryText.set(typeof summary === 'string' ? summary : '');
   }
 
   // -------------------------------------------------------------
@@ -264,30 +205,27 @@ export class ProjectWorkspaceComponent implements OnDestroy {
   // Property Quick-Action 1: Fetch from Address
   // -------------------------------------------------------------
   fetchFromAddress(): void {
-    const proj = this.activeProject();
-    const address = proj?.siteAddress || '46 King Charles Dr, Sovereign Islands QLD';
+    const address = this.activeProject()?.siteAddress?.trim();
+    if (!address) {
+      this.fieldError.set('Add a project with a site address before looking up property details.');
+      return;
+    }
 
+    this.fieldError.set(null);
     this.isFetchingAddress.set(true);
     this.aiService.fetchAddressDetails(address).subscribe({
       next: (res) => {
         this.isFetchingAddress.set(false);
+        if (!res.success || !res.details) {
+          this.fieldError.set(res.error || 'Offline or AI unavailable — audio/data saved locally.');
+          return;
+        }
         this.addressDetails.set(res.details);
         this.isAddressModalOpen.set(true);
       },
-      error: (err) => {
-        console.error('Fetch address error:', err);
+      error: () => {
         this.isFetchingAddress.set(false);
-        this.addressDetails.set({
-          lotNumber: 'Lot 148',
-          rpNumber: 'RP849201',
-          siteArea: '785 m² (8,450 sq ft)',
-          councilZoning: 'Low-Density Residential (LDR)',
-          climateZone: 'Subtropical Zone 2',
-          solarOrientation: 'North-East Living Aspect',
-          floodRisk: 'Low Risk (Zone X)',
-          easements: '2.0m rear boundary drainage buffer',
-        });
-        this.isAddressModalOpen.set(true);
+        this.fieldError.set('Offline or AI unavailable — audio/data saved locally.');
       },
     });
   }
@@ -329,19 +267,22 @@ export class ProjectWorkspaceComponent implements OnDestroy {
       this.isOcrExtracting.set(true);
       this.isOcrModalOpen.set(true);
 
-      this.aiService.extractFromPhotoOcr(base64, file.type).subscribe({
+      this.aiService.extractFromPhotoOcr(base64, file.type || 'image/jpeg').subscribe({
         next: (res) => {
           this.isOcrExtracting.set(false);
+          if (!res.success || !res.extractedText) {
+            this.isOcrModalOpen.set(false);
+            this.fieldError.set(res.error || 'Offline or AI unavailable — audio/data saved locally.');
+            return;
+          }
+          this.fieldError.set(null);
           this.ocrExtractedResult.set(res.extractedText);
           this.ocrTags.set(res.tags || ['OCR Extracted', 'Site Scan']);
         },
-        error: (err) => {
-          console.error('OCR Extraction error:', err);
+        error: () => {
           this.isOcrExtracting.set(false);
-          this.ocrExtractedResult.set(
-            `[OCR Extracted Data]:\n• Main Electrical Panel: 200A 120/240V Square D QO Series\n• Ceiling Height Callout: 9'-6" clear\n• Rough-In Drain Stack: 3" PVC on North-West wall`
-          );
-          this.ocrTags.set(['200A Panel', 'Rough-In', 'Ceiling 9ft 6in']);
+          this.isOcrModalOpen.set(false);
+          this.fieldError.set('Offline or AI unavailable — audio/data saved locally.');
         },
       });
     };
@@ -361,181 +302,6 @@ export class ProjectWorkspaceComponent implements OnDestroy {
     this.isOcrModalOpen.set(false);
   }
 
-  // -------------------------------------------------------------
-  // Mobile Audio Recorder Logic
-  // -------------------------------------------------------------
-  async toggleRecording(): Promise<void> {
-    if (this.isRecording()) {
-      this.stopRecording();
-    } else {
-      await this.startRecording();
-    }
-  }
-
-  async startRecording(): Promise<void> {
-    this.audioChunks = [];
-    this.recordingSeconds.set(0);
-
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.mediaRecorder = new MediaRecorder(stream);
-
-        this.mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            this.audioChunks.push(event.data);
-          }
-        };
-
-        this.mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-          this.saveRecordedAudioBlob(audioBlob);
-          stream.getTracks().forEach((track) => track.stop());
-        };
-
-        this.mediaRecorder.start();
-        this.isRecording.set(true);
-
-        // Start digital timer interval
-        this.timerInterval = setInterval(() => {
-          this.recordingSeconds.update((s) => s + 1);
-        }, 1000);
-
-        // Start simulated audio level visualizer
-        this.audioLevelInterval = setInterval(() => {
-          this.audioLevel.set(Math.floor(Math.random() * 65) + 35);
-        }, 150);
-        return;
-      } catch (err) {
-        console.warn('Microphone access blocked or unavailable in iframe, using demo recording simulation:', err);
-      }
-    }
-
-    // Fallback simulation for restricted environments
-    this.isRecording.set(true);
-    this.timerInterval = setInterval(() => {
-      this.recordingSeconds.update((s) => s + 1);
-    }, 1000);
-
-    this.audioLevelInterval = setInterval(() => {
-      this.audioLevel.set(Math.floor(Math.random() * 65) + 35);
-    }, 150);
-  }
-
-  stopRecording(): void {
-    if (!this.isRecording()) return;
-
-    this.isRecording.set(false);
-    this.audioLevel.set(0);
-
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-    if (this.audioLevelInterval) {
-      clearInterval(this.audioLevelInterval);
-      this.audioLevelInterval = null;
-    }
-
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-    } else {
-      // Simulate saved audio note
-      this.createDemoAudioNote(this.recordingSeconds());
-    }
-  }
-
-  private saveRecordedAudioBlob(blob: Blob): void {
-    const duration = this.recordingSeconds() || 6;
-    const blobUrl = URL.createObjectURL(blob);
-    const noteId = 'audio_' + Date.now();
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64data = reader.result as string;
-      const newNote: AudioNote = {
-        id: noteId,
-        title: `Walkthrough Memo #${(this.activeRoom()?.audioNotes?.length || 0) + 1}`,
-        recordedAt: new Date().toISOString(),
-        durationSeconds: duration,
-        audioBlobUrl: blobUrl,
-        audioBase64: base64data,
-        transcription: 'Transcribing speech with AI...',
-      };
-
-      this.addAudioNoteToActiveRoom(newNote);
-
-      // Trigger AI transcription
-      this.isTranscribing.set(true);
-      this.aiService.transcribeAudio(base64data, blob.type).subscribe({
-        next: (res) => {
-          this.isTranscribing.set(false);
-          this.updateAudioNoteTranscription(noteId, res.transcription);
-        },
-        error: () => {
-          this.isTranscribing.set(false);
-          this.updateAudioNoteTranscription(
-            noteId,
-            'Voice memo: Verified corner wall plumb and rough-in plumbing height at 18" above subfloor.'
-          );
-        },
-      });
-    };
-    reader.readAsDataURL(blob);
-  }
-
-  private createDemoAudioNote(duration = 8): void {
-    const noteId = 'audio_' + Date.now();
-    const count = (this.activeRoom()?.audioNotes?.length || 0) + 1;
-    const demoTranscripts = [
-      `Primary living zone inspection: Client requested 7" wide-plank European white oak with flush baseboards. Verified south window sun exposure and ceiling clearance at 9'-4".`,
-      `Kitchen rough-in review: Island walkway width must be expanded to 48". Check bearing header before opening partition wall to dining area.`,
-      `Master bath walkthrough: Freestanding tub drain location confirmed. Limewash plaster wall finish specified for ambient spa atmosphere.`,
-    ];
-    const sampleText = demoTranscripts[(count - 1) % demoTranscripts.length];
-
-    const newNote: AudioNote = {
-      id: noteId,
-      title: `Field Voice Note #${count}`,
-      recordedAt: new Date().toISOString(),
-      durationSeconds: Math.max(4, duration),
-      transcription: sampleText,
-    };
-
-    this.addAudioNoteToActiveRoom(newNote);
-  }
-
-  private addAudioNoteToActiveRoom(note: AudioNote): void {
-    this.store.updateActiveRoom((room) => ({
-      ...room,
-      audioNotes: [note, ...(room.audioNotes || [])],
-    }));
-  }
-
-  private updateAudioNoteTranscription(noteId: string, transcription: string): void {
-    this.store.updateActiveRoom((room) => ({
-      ...room,
-      audioNotes: (room.audioNotes || []).map((n) =>
-        n.id === noteId ? { ...n, transcription } : n
-      ),
-    }));
-  }
-
-  deleteAudioNote(noteId: string): void {
-    this.store.updateActiveRoom((room) => ({
-      ...room,
-      audioNotes: (room.audioNotes || []).filter((n) => n.id !== noteId),
-    }));
-  }
-
-  // Helper to format seconds to MM:SS
-  formatTimer(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  // -------------------------------------------------------------
   // AI Meeting Summary Generation
   // -------------------------------------------------------------
   generateAiMeetingSummary(): void {
@@ -556,14 +322,17 @@ export class ProjectWorkspaceComponent implements OnDestroy {
 
     const notes = this.meetingSummaryText();
 
+    this.summaryError.set(null);
     this.aiService.generateMeetingSummary(proj, notes, allVoiceTranscripts).subscribe({
       next: (res) => {
         this.isGeneratingSummary.set(false);
+        if (!res.success || !res.summary) {
+          this.summaryError.set(res.error || 'Offline or AI unavailable — audio/data saved locally.');
+          return;
+        }
         this.meetingSummaryText.set(res.summary);
-
-        // Save into project general notes
         this.store.updateActiveProject((p) => {
-          p.survey.clientGeneralNotes = res.summary;
+          p.aiSummary = res.summary;
         });
       },
       error: (err) => {
@@ -587,29 +356,29 @@ export class ProjectWorkspaceComponent implements OnDestroy {
   // Action Items Management
   // -------------------------------------------------------------
   toggleAction(id: string): void {
-    this.actionItems.update((items) =>
-      items.map((it) => (it.id === id ? { ...it, completed: !it.completed } : it))
-    );
+    this.store.updateActiveProject((project) => {
+      project.actionItems = (project.actionItems || []).map((item) =>
+        item.id === id ? { ...item, completed: !item.completed } : item
+      );
+    });
   }
 
   addActionItem(): void {
     const text = this.newActionText().trim();
     if (!text) return;
-
-    const newItem: ActionItem = {
-      id: 'act_' + Date.now(),
-      text,
-      category: this.newActionCategory(),
-      completed: false,
-      priority: 'medium',
-    };
-
-    this.actionItems.update((items) => [newItem, ...items]);
+    this.store.updateActiveProject((project) => {
+      project.actionItems = [
+        { id: 'act_' + Date.now(), text, category: this.newActionCategory(), completed: false, priority: 'medium' },
+        ...(project.actionItems || []),
+      ];
+    });
     this.newActionText.set('');
   }
 
   deleteActionItem(id: string): void {
-    this.actionItems.update((items) => items.filter((it) => it.id !== id));
+    this.store.updateActiveProject((project) => {
+      project.actionItems = (project.actionItems || []).filter((item) => item.id !== id);
+    });
   }
 
   // -------------------------------------------------------------
@@ -625,31 +394,36 @@ export class ProjectWorkspaceComponent implements OnDestroy {
     this.photoUploadInput.nativeElement.click();
   }
 
-  onPhotoSelected(event: Event): void {
+  async onPhotoSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
-
     const file = input.files[0];
-    const reader = new FileReader();
+    input.value = '';
+    if (!this.store.activeRoom()) {
+      this.fieldError.set('Open or create a room before adding a photo.');
+      return;
+    }
 
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    try {
+      const compressed = await compressImageFile(file);
+      const id = 'photo_' + Date.now();
+      await this.media.saveBlob(id, compressed);
       const newPhoto: RoomPhoto = {
-        id: 'photo_' + Date.now(),
-        dataUrl,
+        id,
+        mediaId: id,
+        dataUrl: URL.createObjectURL(compressed),
         caption: `Site Capture - ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         takenAt: new Date().toISOString(),
         tags: ['Walkthrough', 'On-Site'],
         annotations: [],
       };
-
       this.store.updateActiveRoom((room) => ({
         ...room,
         photos: [newPhoto, ...(room.photos || [])],
       }));
-    };
-
-    reader.readAsDataURL(file);
-    input.value = '';
+    } catch (error) {
+      console.error('Photo save failed:', error);
+      this.fieldError.set('Could not save that photo on this device.');
+    }
   }
 }

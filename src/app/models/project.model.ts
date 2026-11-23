@@ -39,6 +39,8 @@ export interface CanvasShape {
   label: string;
   color?: string;
   points?: { x: number; y: number }[]; // for polygon walls
+  /** Matching schedule row when this symbol is a door or window. */
+  openingId?: string;
 }
 
 export interface OpeningItem {
@@ -76,7 +78,10 @@ export interface PhotoAnnotation {
 
 export interface RoomPhoto {
   id: string;
-  dataUrl: string;
+  /** IndexedDB key for the compressed JPEG. Runtime display uses dataUrl. */
+  mediaId?: string;
+  /** Object URL or remote URL. Data URLs are not persisted. */
+  dataUrl?: string;
   caption: string;
   takenAt: string;
   tags: string[];
@@ -88,9 +93,30 @@ export interface AudioNote {
   title: string;
   recordedAt: string;
   durationSeconds: number;
+  /** IndexedDB key for the audio blob. */
+  mediaId?: string;
+  /** Runtime object URL rebuilt from IndexedDB. Not persisted. */
   audioBlobUrl?: string;
+  /** Legacy inline audio. Stripped before localStorage writes. */
   audioBase64?: string;
   transcription?: string;
+  /** Walkthrough tags captured while recording, e.g. Client Idea at 02:14. */
+  markers?: AudioMarker[];
+}
+
+export type AudioMarkerTag = 'Client Idea' | 'Site Constraint' | 'Action Item';
+
+export interface AudioMarker {
+  timeSeconds: number;
+  tag: AudioMarkerTag;
+}
+
+export interface ActionItem {
+  id: string;
+  text: string;
+  category: 'Design' | 'Contractor' | 'Measurement' | 'Client' | 'Permit';
+  completed: boolean;
+  priority: 'low' | 'medium' | 'high';
 }
 
 export interface RoomDimensions {
@@ -304,8 +330,10 @@ export interface Project {
   surveyCompletedAt?: string;
   survey: DesignSurvey;
   rooms: Room[];
+  actionItems: ActionItem[];
   aiProposal?: AiProposalSummary;
-  aiSummary?: AiProposalSummary;
+  /** Meeting summary text. Kept separate from survey.clientGeneralNotes. */
+  aiSummary?: string;
   clientSignOff?: ClientSignOff;
 }
 

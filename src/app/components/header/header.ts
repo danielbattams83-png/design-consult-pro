@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,7 @@ import { NewSurveyComponent } from '../new-survey/new-survey.component';
 })
 export class HeaderComponent {
   store = inject(ProjectStore);
+  readonly openSettings = output<void>();
 
   readonly isProjectDropdownOpen = signal<boolean>(false);
   readonly isNewProjectModalOpen = signal<boolean>(false);
@@ -38,8 +39,14 @@ export class HeaderComponent {
   unit = this.store.unit;
   totals = this.store.projectTotals;
 
-  setTab(tab: 'dashboard' | 'survey' | 'measure' | 'conditions' | 'media' | 'ai' | 'report' | 'workspace'): void {
+  setTab(tab: string): void {
     this.store.setTab(tab);
+  }
+
+  ceilingLabel(): string {
+    const height = this.activeRoom()?.dimensions.ceilingHeightFt;
+    if (!height) return '';
+    return this.unit() === 'metric' ? `${Math.round(height)} mm` : `${height} ft`;
   }
 
   toggleUnit(): void {

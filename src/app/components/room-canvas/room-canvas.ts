@@ -11,8 +11,10 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { CanvasShape, Room, WallSegment } from '../../models/project.model';
+import { CanvasShape, OpeningItem, Room, WallSegment } from '../../models/project.model';
+import { MediaStorageService } from '../../services/media-storage.service';
 import { ProjectStore } from '../../services/project-store.service';
+import { compressImageFile } from '../../utils/image-compressor';
 
 @Component({
   selector: 'app-room-canvas',
@@ -22,6 +24,7 @@ import { ProjectStore } from '../../services/project-store.service';
 })
 export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
   store = inject(ProjectStore);
+  private media = inject(MediaStorageService);
 
   @ViewChild('canvasEl') canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('containerEl') containerRef!: ElementRef<HTMLDivElement>;
@@ -38,6 +41,9 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
   private dragStartPos = { x: 0, y: 0 };
   private panStartPos = { x: 0, y: 0 };
   private activeNodeIndex: number | null = null;
+  private preview: Room | null = null;
+  private pinchStartDistance = 0;
+  private pinchStartZoom = 1;
   private resizeObserver?: ResizeObserver;
 
   readonly activeRoom = this.store.activeRoom;
@@ -123,7 +129,7 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
-    const room = this.activeRoom();
+    const room = this.preview || this.activeRoom();
     if (room) {
       this.drawRoomWalls(ctx, room);
       this.drawArchitecturalElements(ctx, room);
@@ -610,34 +616,30 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
       }
 
       // Dragging a corner handle
+      const draft = this.ensurePreview();
       if (this.activeNodeIndex !== null) {
-        this.store.updateActiveRoom((r) => {
-          const poly = r.canvasSketch?.shapes?.find((s) => s.type === 'wall_poly');
-          if (poly && poly.points && this.activeNodeIndex !== null) {
-            poly.points[this.activeNodeIndex] = { x: targetX, y: targetY };
-            // Update wall segments length
-            this.syncWallLengthsFromPolygon(r, poly.points);
-          }
-          return r;
-        });
-      }
-      // Dragging a placed element
-      else if (this.selectedShapeId()) {
-        const shapeId = this.selectedShapeId();
-        this.store.updateActiveRoom((r) => {
-          const s = r.canvasSketch?.shapes?.find((item) => item.id === shapeId);
-          if (s) {
-            s.x = targetX;
-            s.y = targetY;
-          }
-          return r;
-        });
+        const poly = draft.canvasSketch?.shapes?.find((s) => s.type === 'wall_poly');
+        if (poly?.points && this.activeNodeIndex !== null) {
+          poly.points[this.activeNodeIndex] = { x: targetX, y: targetY };
+          this.syncWallLengthsFromPolygon(draft, poly.points);
+        }
+      } else if (this.selectedShapeId()) {
+        const shape = draft.canvasSketch?.shapes?.find((item) => item.id === this.selectedShapeId());
+        if (shape) {
+          shape.x = targetX;
+          shape.y = targetY;
+        }
       }
       this.draw();
     }
   }
 
   onMouseUp(): void {
+    if (this.preview) {
+      const committed = this.preview;
+      this.preview = null;
+      this.store.updateActiveRoom(() => committed);
+    }
     this.isDragging.set(false);
     this.isPanning.set(false);
     this.activeNodeIndex = null;
@@ -654,25 +656,34 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
   // --- Touch Support for Mobile / iPad Field Work ---
 
   onTouchStart(e: TouchEvent): void {
+    e.preventDefault();
+    if (e.touches.length >= 2) {
+      this.pinchStartDistance = this.touchDistance(e);
+      this.pinchStartZoom = this.zoomLevel();
+      this.isPanning.set(false);
+      this.isDragging.set(false);
+      return;
+    }
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      const mouseEvt = new MouseEvent('mousedown', {
-        clientX: t.clientX,
-        clientY: t.clientY,
-        button: 0,
-      });
-      this.onMouseDown(mouseEvt);
+      this.onMouseDown(new MouseEvent('mousedown', { clientX: t.clientX, clientY: t.clientY, button: 0 }));
     }
   }
 
   onTouchMove(e: TouchEvent): void {
+    e.preventDefault();
+    if (e.touches.length >= 2) {
+      const distance = this.touchDistance(e);
+      if (this.pinchStartDistance > 0) {
+        const next = Math.min(2.5, Math.max(0.4, this.pinchStartZoom * (distance / this.pinchStartDistance)));
+        this.zoomLevel.set(Math.round(next * 100) / 100);
+        this.draw();
+      }
+      return;
+    }
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      const mouseEvt = new MouseEvent('mousemove', {
-        clientX: t.clientX,
-        clientY: t.clientY,
-      });
-      this.onMouseMove(mouseEvt);
+      this.onMouseMove(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY }));
     }
   }
 
@@ -757,7 +768,9 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
     const shapeId = this.selectedShapeId();
     if (!shapeId) return;
     this.store.updateActiveRoom((r) => {
+      const shape = r.canvasSketch.shapes.find((s) => s.id === shapeId);
       r.canvasSketch.shapes = r.canvasSketch.shapes.filter((s) => s.id !== shapeId);
+      if (shape?.openingId) r.openings = (r.openings || []).filter((opening) => opening.id !== shape.openingId);
       return r;
     });
     this.selectedShapeId.set(null);
@@ -782,29 +795,34 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
   exportSnapshot(): void {
     const canvas = this.canvasRef?.nativeElement;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
-
-    // Add directly to room photo gallery
-    const room = this.activeRoom();
-    if (room) {
-      this.store.updateActiveRoom((r) => {
-        r.photos.unshift({
-          id: 'snap_' + Date.now(),
-          dataUrl,
-          caption: `2D CAD Blueprint Snapshot - ${r.name}`,
-          takenAt: new Date().toISOString(),
-          tags: ['Blueprint', 'Field Measure', 'CAD'],
-          annotations: [],
+    const roomName = this.activeRoom()?.name || 'room';
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        const compressed = await compressImageFile(blob);
+        const id = 'snap_' + Date.now();
+        await this.media.saveBlob(id, compressed);
+        const url = URL.createObjectURL(compressed);
+        this.store.updateActiveRoom((r) => {
+          r.photos.unshift({
+            id,
+            mediaId: id,
+            dataUrl: url,
+            caption: `2D CAD Blueprint Snapshot - ${r.name}`,
+            takenAt: new Date().toISOString(),
+            tags: ['Blueprint', 'Field Measure', 'CAD'],
+            annotations: [],
+          });
+          return r;
         });
-        return r;
-      });
-    }
-
-    // Trigger download for user
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `${room?.name || 'room'}-measure-plan.png`;
-    a.click();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${roomName}-measure-plan.jpg`;
+        a.click();
+      } catch (error) {
+        console.error('Snapshot save failed:', error);
+      }
+    }, 'image/png');
   }
 
   // --- Geometry & Helpers ---
@@ -835,9 +853,12 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
     }
 
     if (newShape) {
+      const opening = tool === 'add_door' || tool === 'add_window' ? this.openingForSymbol(newShape, tool) : null;
+      if (opening) newShape.openingId = opening.id;
       this.store.updateActiveRoom((r) => {
         if (!r.canvasSketch) r.canvasSketch = { shapes: [], gridSize: 20, scale: 1.0 };
         r.canvasSketch.shapes.push(newShape!);
+        if (opening) r.openings = [...(r.openings || []), opening];
         return r;
       });
       this.selectedShapeId.set(newShape.id);
@@ -853,15 +874,16 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
       const p1 = points[i];
       const p2 = points[(i + 1) % points.length];
       const lengthPx = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const lengthFt = Math.round((lengthPx / this.PIXELS_PER_FOOT) * 10) / 10;
+      const feet = lengthPx / this.PIXELS_PER_FOOT;
+      const stored = this.unit() === 'metric' ? Math.round(feet * 304.8) : Math.round(feet * 10) / 10;
       const wallLetter = String.fromCharCode(65 + i);
 
       walls.push({
         id: `w_${i + 1}`,
         name: `Wall ${wallLetter} (${orientationLabels[i % orientationLabels.length]})`,
         orientation: orientationLabels[i % orientationLabels.length],
-        lengthFt: Math.max(1, lengthFt),
-        heightFt: room.dimensions.ceilingHeightFt || 9.5,
+        lengthFt: Math.max(this.unit() === 'metric' ? 300 : 1, stored),
+        heightFt: room.dimensions.ceilingHeightFt || (this.unit() === 'metric' ? 2896 : 9.5),
       });
     }
     room.dimensions.walls = walls;
@@ -879,13 +901,38 @@ export class RoomCanvasComponent implements AfterViewInit, OnDestroy {
 
   private formatDimension(feet: number): string {
     if (this.unit() === 'metric') {
-      const meters = Math.round(feet * 0.3048 * 100) / 100;
-      return `${meters}m`;
+      return `${Math.round(feet * 304.8)} mm`;
     }
     const ft = Math.floor(feet);
     const inches = Math.round((feet - ft) * 12);
     if (inches === 12) return `${ft + 1}' 0"`;
     return `${ft}' ${inches}"`;
+  }
+
+  private ensurePreview(): Room {
+    if (!this.preview) {
+      this.preview = JSON.parse(JSON.stringify(this.activeRoom()));
+    }
+    return this.preview as Room;
+  }
+
+  private touchDistance(event: TouchEvent): number {
+    const [a, b] = [event.touches[0], event.touches[1]];
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+
+  private openingForSymbol(shape: CanvasShape, tool: 'add_door' | 'add_window'): OpeningItem {
+    const metric = this.unit() === 'metric';
+    return {
+      id: 'op_' + shape.id,
+      type: tool === 'add_window' ? 'window' : 'door',
+      wallName: this.activeRoom()?.dimensions.walls[0]?.name || 'Wall A',
+      widthInches: metric ? (tool === 'add_window' ? 1219 : 914) : tool === 'add_window' ? 48 : 36,
+      heightInches: metric ? (tool === 'add_window' ? 1524 : 2134) : tool === 'add_window' ? 60 : 84,
+      sillHeightInches: tool === 'add_window' ? (metric ? 762 : 30) : 0,
+      trimWidthInches: metric ? 89 : 3.5,
+      casingDetails: 'Field symbol',
+    };
   }
 
   private getCanvasCoords(e: MouseEvent): { worldX: number; worldY: number } {

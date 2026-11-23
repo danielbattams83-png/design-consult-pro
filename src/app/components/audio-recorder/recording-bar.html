@@ -1,0 +1,17 @@
+@if (session.status() !== 'idle') {
+  <div class="no-print fixed inset-x-0 z-40 px-2 bottom-[calc(4.25rem+env(safe-area-inset-bottom))]">
+    <div class="mx-auto flex max-w-3xl items-center gap-1 overflow-x-auto rounded-2xl bg-slate-900 px-2 py-1.5 text-white shadow-2xl">
+      <span class="inline-flex min-h-[44px] items-center gap-1 px-2 font-mono-digits text-sm font-bold text-rose-300">
+        <span class="h-2.5 w-2.5 rounded-full" [class.bg-rose-500]="session.status() === 'recording'" [class.bg-amber-400]="session.status() === 'paused'"></span>
+        {{ session.formatTime(session.recordingSeconds()) }}
+      </span>
+      <button type="button" (click)="session.pauseOrResume()" class="min-h-[44px] rounded-xl px-3 text-xs font-bold cursor-pointer">
+        {{ session.status() === 'paused' ? 'Resume' : 'Pause' }}
+      </button>
+      <button type="button" (click)="session.addMarker('Client Idea')" class="min-h-[44px] rounded-xl bg-slate-800 px-2 text-[11px] font-bold cursor-pointer">+ Idea</button>
+      <button type="button" (click)="session.addMarker('Site Constraint')" class="min-h-[44px] rounded-xl bg-slate-800 px-2 text-[11px] font-bold cursor-pointer">+ Issue</button>
+      <button type="button" (click)="session.addMarker('Action Item')" class="min-h-[44px] rounded-xl bg-slate-800 px-2 text-[11px] font-bold cursor-pointer">+ Action</button>
+      <button type="button" (click)="session.stop()" class="min-h-[44px] rounded-xl bg-rose-600 px-3 text-xs font-bold cursor-pointer">Stop</button>
+    </div>
+  </div>
+}

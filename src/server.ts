@@ -8,6 +8,8 @@ import express from 'express';
 import {join} from 'node:path';
 import {GoogleGenAI, Type} from '@google/genai';
 
+const AI_OFFLINE = 'Offline or AI unavailable — audio/data saved locally.';
+
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
@@ -18,7 +20,7 @@ app.use(express.json({ limit: '30mb' }));
 // Lazy Google GenAI Client
 let genAiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI | null {
-  const apiKey = process.env['GEMINI_API_KEY'];
+  const apiKey = process.env['SITE_MEASURE_KEY'] || process.env['GEMINI_API_KEY'];
   if (!apiKey) {
     return null;
   }
@@ -44,9 +46,7 @@ app.post('/api/ai/generate-brief', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      // Fallback deterministic brief if API key is not configured
-      const fallbackBrief = generateFallbackBrief(projectData);
-      return res.json({ success: true, brief: fallbackBrief, isFallback: true });
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
     const prompt = `You are a licensed Senior Interior Architect and Site Survey Consultant analyzing an on-site field survey and room measurements.
@@ -57,7 +57,7 @@ Provide a comprehensive, high-standard professional design consultation report, 
 Return JSON adhering strictly to the schema provided.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -127,15 +127,7 @@ Return JSON adhering strictly to the schema provided.`;
     return res.json({ success: true, brief: parsed, isFallback: false });
   } catch (error: unknown) {
     console.error('Error generating AI brief:', error);
-    const errMsg = error instanceof Error ? error.message : 'AI request failed';
-    // Return gracefully with fallback
-    const fallbackBrief = generateFallbackBrief(req.body);
-    return res.json({
-      success: true,
-      brief: fallbackBrief,
-      isFallback: true,
-      error: errMsg,
-    });
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
 
@@ -148,14 +140,11 @@ app.post('/api/ai/consult-qa', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      return res.json({
-        success: true,
-        answer: 'Offline/Keyless Mode: Ensure minimum 36" (91cm) walkway clearances around islands and 42"-48" in multi-cook kitchens. Always verify load-bearing headers with a structural engineer before removing walls exceeding 8ft spans.',
-      });
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-2.5-flash',
       contents: `You are an expert Interior Architect and Field Superintendent advising a designer on-site.
 Context of active project & room measurements:
 ${JSON.stringify(context || {}, null, 2)}
@@ -169,8 +158,7 @@ Provide concise, precise architectural, building code, clearances (ADA/NKBA), an
     return res.json({ success: true, answer: response.text });
   } catch (error: unknown) {
     console.error('Error in consult Q&A:', error);
-    const errMsg = error instanceof Error ? error.message : 'Internal error';
-    return res.status(500).json({ success: false, error: errMsg });
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
 
@@ -179,20 +167,16 @@ Provide concise, precise architectural, building code, clearances (ADA/NKBA), an
  */
 app.post('/api/ai/transcribe-note', async (req, res) => {
   try {
-    const { audioBase64, mimeType = 'audio/webm' } = req.body;
+    const { audioBase64, mimeType = 'audio/webm', projectName = '', roomName = '' } = req.body ?? {};
     const ai = getGenAI();
+    const cleanBase64 = stripDataUrl(typeof audioBase64 === 'string' ? audioBase64 : '');
 
-    if (!ai || !audioBase64) {
-      return res.json({
-        success: true,
-        transcription: 'Audio recorded successfully. (On-site voice note logged: inspected wall joints, electrical rough-in points, and flooring transition height.)',
-      });
+    if (!ai || !cleanBase64) {
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
-    const cleanBase64 = audioBase64.replace(/^data:audio\/[a-zA-Z0-9]+;base64,/, '');
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-transcribe',
+      model: 'gemini-2.5-flash',
       contents: {
         parts: [
           {
@@ -202,19 +186,27 @@ app.post('/api/ai/transcribe-note', async (req, res) => {
             },
           },
           {
-            text: 'Transcribe this on-site design inspection voice note verbatim, fixing any contractor terminology or room dimension speech.',
+            text: `You are an Australian architectural designer's field transcriptionist working on Queensland residential and small-commercial sites.
+Project: ${projectName || 'Untitled project'}
+Room: ${roomName || 'Unspecified room'}
+Transcribe the walkthrough verbatim.
+- Keep every spoken dimension. Write millimetres as mm and metres as m (for example "three six five oh" as 3650 mm, "two point four metres" as 2.4 m).
+- Preserve any spoken or embedded timestamp tags exactly, including the form [MM:SS - TAG].
+- Spell Australian and Queensland construction terms correctly when they are said: soffit, eaves, ridge beam, raked ceiling, nib wall, load-bearing, damp proof course, BAL rating, setback, joinery, wet area, fall, cyclonic tie-down, boundary clearance.
+Do not invent measurements, rooms, or site conditions that were not spoken.`,
           },
         ],
       },
     });
 
-    return res.json({ success: true, transcription: response.text || 'Transcription complete.' });
+    const transcription = (response.text || '').trim();
+    if (!transcription) {
+      return res.json({ success: false, error: AI_OFFLINE });
+    }
+    return res.json({ success: true, transcription });
   } catch (error: unknown) {
     console.error('Error transcribing audio:', error);
-    return res.json({
-      success: true,
-      transcription: 'Voice memo saved to room log. Field observation noted.',
-    });
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
 
@@ -227,43 +219,76 @@ app.post('/api/ai/meeting-summary', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      const summaryText = generateFallbackMeetingSummary(project, notes, voiceTranscripts);
-      return res.json({ success: true, summary: summaryText, isFallback: true });
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
-    const prompt = `You are a Senior Interior Architect and On-Site Project Lead summarizing a client design consultation and walkthrough.
-Project Details:
-- Project Name: ${project?.name || 'Site Project'}
-- Client: ${project?.clientName || 'Private Client'}
-- Address: ${project?.siteAddress || 'Site Location'}
-- Budget: $${project?.targetBudget?.toLocaleString() || 'N/A'} (${project?.budgetFlexibility || 'Moderate'})
-- Timeline: ${project?.targetTimeline || 'Standard'}
-- Styles: ${project?.survey?.selectedStyles?.join(', ') || 'Modern'}
-- Rooms Surveyed: ${project?.rooms?.map((r: { name: string; dimensions?: { calculatedFloorArea?: number } }) => `${r.name} (${Math.round(r.dimensions?.calculatedFloorArea || 0)} sqft)`).join(', ') || 'General Space'}
+    const rooms = Array.isArray(project?.rooms) ? project.rooms : [];
+    const unit = project?.rooms?.[0]?.dimensions?.unit === 'metric' ? 'metric' : 'imperial';
+    const roomSchedule = rooms
+      .map((room: {
+        name?: string;
+        level?: string;
+        dimensions?: { ceilingHeightFt?: number; calculatedFloorArea?: number; walls?: { name?: string; lengthFt?: number }[] };
+        conditions?: unknown;
+        openings?: { type?: string; widthInches?: number; heightInches?: number; wallName?: string }[];
+      }) => {
+        const walls = (room.dimensions?.walls || [])
+          .map((wall) => `${wall.name || 'Wall'}: ${wall.lengthFt}`)
+          .join('; ');
+        const openings = (room.openings || [])
+          .map((opening) => `${opening.type || 'opening'} ${opening.widthInches} x ${opening.heightInches} on ${opening.wallName || 'wall'}`)
+          .join('; ');
+        return [
+          `Room: ${room.name || 'Room'} (${room.level || 'level unknown'})`,
+          `Stored unit: ${unit} (metric lengths are mm, metric areas are m², metric ceiling height is mm; imperial lengths are feet)`,
+          `Ceiling: ${room.dimensions?.ceilingHeightFt ?? 'unknown'}`,
+          `Floor area: ${room.dimensions?.calculatedFloorArea ?? 'unknown'}`,
+          `Walls: ${walls || 'none recorded'}`,
+          `Openings: ${openings || 'none recorded'}`,
+          `Site conditions: ${JSON.stringify(room.conditions || {})}`,
+        ].join('\n');
+      })
+      .join('\n\n');
 
-Consultation Field Notes & Transcriptions:
-${notes || 'General walkthrough notes'}
-${voiceTranscripts?.length ? `\nVoice Memos:\n${voiceTranscripts.join('\n')}` : ''}
+    const prompt = `You are an Australian architectural designer writing a Concept Design Brief after a Queensland site walkthrough.
+Project: ${project?.name || 'Site Project'}
+Client: ${project?.clientName || 'Private Client'}
+Address: ${project?.siteAddress || 'Site address not recorded'}
+Styles: ${(project?.survey?.selectedStyles || []).join(', ') || 'not recorded'}
+Client notes: ${project?.survey?.clientGeneralNotes || notes || 'none'}
+Action items: ${JSON.stringify(project?.actionItems || [])}
 
-Generate an executive, actionable on-site meeting summary with these clear sections:
-1. KEY CLIENT OBJECTIVES & LIFESTYLE GOALS
-2. SPATIAL & ARCHITECTURAL DIRECTIVES (Room layout, openings, lighting)
-3. MATERIAL & FINISH DECISIONS (Flooring, millwork, color mood)
-4. CONTRACTOR / STRUCTURAL RISK FLAGS (Load-bearing headers, subfloor prep, electrical/plumbing)
-5. NEXT STEPS & IMMEDIATE ACTION ITEMS (CAD drawings, contractor bids, sample boards)
+Room schedules, ceiling heights, and site conditions:
+${roomSchedule || 'No rooms recorded'}
 
-Keep it highly professional, precise, and directly usable by the design team.`;
+Field notes:
+${notes || 'None'}
+
+Voice transcripts (keep [MM:SS - TAG] markers if present):
+${voiceTranscripts?.length ? voiceTranscripts.join('\n') : 'None'}
+
+Write a structured Markdown Concept Design Brief and use these headings exactly:
+## Client Brief & Spatial Goals
+## Site, Structural & Service Constraints
+## Architectural Concept Ideas & Solutions
+## Follow-Up & Missing Site Checks
+
+Present dimensions in mm and areas in m². If the stored unit is imperial, convert feet to mm (× 304.8) and square feet to m² (× 0.092903). Use Australian terminology where the notes support it: soffit, eaves, ridge beam, raked ceiling, nib wall, load-bearing, damp proof course, BAL rating, setback, joinery, wet area, fall, cyclonic tie-down, boundary clearance.
+Do not invent site facts that are not in the schedules, notes, or transcripts. Put unknowns under Follow-Up & Missing Site Checks.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
 
-    return res.json({ success: true, summary: response.text || generateFallbackMeetingSummary(project, notes, voiceTranscripts), isFallback: false });
+    const summary = (response.text || '').trim();
+    if (!summary) {
+      return res.json({ success: false, error: AI_OFFLINE });
+    }
+    return res.json({ success: true, summary });
   } catch (error: unknown) {
     console.error('Error generating meeting summary:', error);
-    const summaryText = generateFallbackMeetingSummary(req.body.project, req.body.notes, req.body.voiceTranscripts);
-    return res.json({ success: true, summary: summaryText, isFallback: true });
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
 
@@ -275,19 +300,13 @@ app.post('/api/ai/extract-ocr', async (req, res) => {
     const { imageBase64, mimeType = 'image/jpeg' } = req.body;
     const ai = getGenAI();
 
-    if (!ai || !imageBase64) {
-      return res.json({
-        success: true,
-        extractedText: `[OCR Simulated Result]\n• Main Electrical Panel: 200A 120/240V Square D QO Series\n• Dimension Callout: Wall A = 16'-4", Ceiling Height = 9'-6"\n• Floor Finish Spec: 7" Engineered European Oak (Brushed)\n• HVAC Tag: Carrier Infinity 4-Ton Variable Speed Air Handler (2022)`,
-        tags: ['Electrical Panel', '200A Service', 'Engineered Oak', 'Ceiling 9ft 6in'],
-        isFallback: true,
-      });
+    const cleanBase64 = stripDataUrl(typeof imageBase64 === 'string' ? imageBase64 : '');
+    if (!ai || !cleanBase64) {
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, '');
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-2.5-flash',
       contents: {
         parts: [
           {
@@ -311,20 +330,57 @@ Format clearly with bulleted items and high-signal architectural labels.`,
       },
     });
 
+    const extractedText = (response.text || '').trim();
+    if (!extractedText) {
+      return res.json({ success: false, error: AI_OFFLINE });
+    }
     return res.json({
       success: true,
-      extractedText: response.text || 'No text recognized in image.',
+      extractedText,
       tags: ['OCR Extracted', 'Site Scan'],
-      isFallback: false,
     });
   } catch (error: unknown) {
     console.error('Error in OCR extraction:', error);
-    return res.json({
-      success: true,
-      extractedText: `[OCR Scan Note]: Captured image details logged. Extracted rough-in plumbing height 18" AFF and 200A breaker panel label.`,
-      tags: ['Site Scan', 'Rough-In'],
-      isFallback: true,
+    return res.json({ success: false, error: AI_OFFLINE });
+  }
+});
+
+/**
+ * On-site photo critique for spatial, daylight, and structural ideas.
+ */
+app.post('/api/ai/site-photo-critique', async (req, res) => {
+  try {
+    const { imageBase64, mimeType = 'image/jpeg', question = '', roomContext = '' } = req.body ?? {};
+    const ai = getGenAI();
+    const cleanBase64 = stripDataUrl(typeof imageBase64 === 'string' ? imageBase64 : '');
+    if (!ai || !cleanBase64) {
+      return res.json({ success: false, error: AI_OFFLINE });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: mimeType || 'image/jpeg', data: cleanBase64 } },
+          {
+            text: `You are an Australian architectural designer looking at one site photograph.
+Room context: ${roomContext || 'Not provided'}
+Question: ${question || 'What spatial, daylighting, or structural layout ideas does this photo suggest?'}
+Reply in short Markdown with practical observations about space, daylight, structure, and wet-area or setback issues only if the photo supports them.
+Do not invent dimensions that are not visible. Flag anything that still needs a tape or laser check.`,
+          },
+        ],
+      },
     });
+
+    const critique = (response.text || '').trim();
+    if (!critique) {
+      return res.json({ success: false, error: AI_OFFLINE });
+    }
+    return res.json({ success: true, critique });
+  } catch (error: unknown) {
+    console.error('Error critiquing site photo:', error);
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
 
@@ -337,21 +393,7 @@ app.post('/api/ai/fetch-address-details', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai || !address) {
-      return res.json({
-        success: true,
-        details: {
-          lotNumber: 'Lot 148',
-          rpNumber: 'RP849201',
-          siteArea: '785 m² (8,450 sq ft)',
-          councilZoning: 'Low-Density Residential (LDR)',
-          climateZone: 'Subtropical Marine (Zone 2)',
-          solarOrientation: 'North-East rear orientation (Optimal solar passive gain)',
-          estimatedBuildEra: '2016 Contemporary Waterfront',
-          floodRisk: 'Low (Zone X - Above 1-in-100yr AEP level)',
-          easements: '2.0m stormwater easement along rear boundary',
-        },
-        isFallback: true,
-      });
+      return res.json({ success: false, error: AI_OFFLINE });
     }
 
     const prompt = `You are a real estate cadastral data and parcel lookup engine.
@@ -371,7 +413,7 @@ Return JSON with this schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -382,22 +424,18 @@ Return JSON with this schema:
     return res.json({ success: true, details: parsed, isFallback: false });
   } catch (error: unknown) {
     console.error('Error fetching property details:', error);
-    return res.json({
-      success: true,
-      details: {
-        lotNumber: 'Lot 148',
-        rpNumber: 'RP849201',
-        siteArea: '785 m² (8,450 sq ft)',
-        councilZoning: 'Residential Low-Medium Density',
-        climateZone: 'Zone 2 Subtropical',
-        solarOrientation: 'Optimal North-East Living Orientation',
-        floodRisk: 'Low Risk (Zone X)',
-        easements: 'Standard perimeter utility buffer',
-      },
-      isFallback: true,
-    });
+    return res.json({ success: false, error: AI_OFFLINE });
   }
 });
+
+function stripDataUrl(value: string): string {
+  if (!value.startsWith('data:')) return value;
+  const marker = ';base64,';
+  const markerAt = value.indexOf(marker);
+  if (markerAt !== -1) return value.slice(markerAt + marker.length);
+  const commaAt = value.indexOf(',');
+  return commaAt !== -1 ? value.slice(commaAt + 1) : value;
+}
 
 function generateFallbackMeetingSummary(project: Record<string, unknown>, notes: string, voiceTranscripts?: string[]) {
   const name = (project?.['name'] as string) || 'On-Site Design Consult';

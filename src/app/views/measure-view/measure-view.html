@@ -51,7 +51,7 @@
           {{ room.dimensions.calculatedVolume || 0 }}
           <span class="text-xs font-semibold text-slate-500 uppercase">{{ unit() === 'metric' ? 'm³' : 'cu ft' }}</span>
         </div>
-        <div class="text-[10px] text-slate-400 mt-1 font-medium">&#64; {{ room.dimensions.ceilingHeightFt || 9.5 }}' Ceiling clear</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Ceiling {{ room.dimensions.ceilingHeightFt || 0 }} {{ unit() === 'metric' ? 'mm' : 'ft' }}</div>
       </div>
     </div>
 
@@ -119,7 +119,7 @@
 
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label [for]="'wall-len-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Length ({{ unit() === 'metric' ? 'm' : 'ft' }})</label>
+                      <label [for]="'wall-len-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Length ({{ unit() === 'metric' ? 'mm' : 'ft' }})</label>
                       <input
                         [id]="'wall-len-' + wall.id"
                         type="number"
@@ -130,7 +130,7 @@
                       />
                     </div>
                     <div>
-                      <label [for]="'wall-ht-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Height ({{ unit() === 'metric' ? 'm' : 'ft' }})</label>
+                      <label [for]="'wall-ht-' + wall.id" class="text-[10px] text-slate-500 font-bold block">Height ({{ unit() === 'metric' ? 'mm' : 'ft' }})</label>
                       <input
                         [id]="'wall-ht-' + wall.id"
                         type="number"

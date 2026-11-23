@@ -28,6 +28,9 @@
           <span>{{ proj.aiProposal ? 'Regenerate Brief' : 'Generate Full AI Brief' }}</span>
         }
       </button>
+      @if (aiError()) {
+        <p class="w-full text-xs text-rose-700" role="alert">{{ aiError() }}</p>
+      }
     </div>
 
     <!-- Generated Proposal Content -->
