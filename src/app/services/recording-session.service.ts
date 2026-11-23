@@ -55,7 +55,7 @@ export class RecordingSessionService {
       this.stream = stream;
       this.mimeType = preferredAudioMime();
       this.audioChunks = [];
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType: this.mimeType });
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType: this.mimeType, audioBitsPerSecond: 32000 });
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.audioChunks.push(event.data);
       };

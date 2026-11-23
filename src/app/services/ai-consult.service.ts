@@ -3,7 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
 import { AiProposalSummary, Project } from '../models/project.model';
 
-const AI_OFFLINE = 'Offline or AI unavailable — audio/data saved locally.';
+function aiHttpError(err: { error?: { error?: string }; status?: number; statusText?: string }): string {
+  return err?.error?.error || `HTTP ${err.status}: ${err.statusText}`;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -14,13 +16,13 @@ export class AiConsultService {
   generateProposalBrief(project: Project): Observable<{ success: boolean; brief?: AiProposalSummary; error?: string }> {
     return this.http
       .post<{ success: boolean; brief?: AiProposalSummary; error?: string }>('/api/ai/generate-brief', project)
-      .pipe(catchError((err) => of({ success: false, error: err?.error?.error || AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   askConsultantQA(question: string, context: Record<string, unknown>): Observable<{ success: boolean; answer?: string; error?: string }> {
     return this.http
       .post<{ success: boolean; answer?: string; error?: string }>('/api/ai/consult-qa', { question, context })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   transcribeAudio(
@@ -35,7 +37,7 @@ export class AiConsultService {
         projectName: context?.projectName || '',
         roomName: context?.roomName || '',
       })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   generateMeetingSummary(
@@ -49,7 +51,7 @@ export class AiConsultService {
         notes,
         voiceTranscripts,
       })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   critiqueSitePhoto(
@@ -65,7 +67,7 @@ export class AiConsultService {
         question,
         roomContext,
       })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   extractFromPhotoOcr(
@@ -77,7 +79,7 @@ export class AiConsultService {
         imageBase64,
         mimeType,
       })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 
   fetchAddressDetails(address: string): Observable<{
@@ -111,6 +113,6 @@ export class AiConsultService {
         };
         error?: string;
       }>('/api/ai/fetch-address-details', { address })
-      .pipe(catchError(() => of({ success: false, error: AI_OFFLINE })));
+      .pipe(catchError((err) => of({ success: false, error: aiHttpError(err) })));
   }
 }

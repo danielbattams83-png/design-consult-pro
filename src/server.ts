@@ -8,7 +8,15 @@ import express from 'express';
 import {join} from 'node:path';
 import {GoogleGenAI, Type} from '@google/genai';
 
-const AI_OFFLINE = 'Offline or AI unavailable — audio/data saved locally.';
+const MISSING_KEY = 'SITE_MEASURE_KEY is missing in server environment';
+
+function geminiError(err: unknown): string {
+  console.error('[Gemini AI Error]', err);
+  if (err && typeof err === 'object' && 'message' in err && typeof err.message === 'string' && err.message) {
+    return err.message;
+  }
+  return 'Unknown server error';
+}
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -16,6 +24,16 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 app.use(express.json({ limit: '30mb' }));
+
+app.use((req, _res, next) => {
+  const header = req.headers['x-forwarded-uri'] ?? req.headers['x-invoke-path'];
+  const original = Array.isArray(header) ? header[0] : header;
+  if (original?.startsWith('/api/') && req.url && !req.url.startsWith('/api/')) {
+    const path = original.split('?')[0];
+    req.url = original.includes('?') ? `${path}?${original.split('?')[1]}` : path;
+  }
+  next();
+});
 
 // Lazy Google GenAI Client
 let genAiClient: GoogleGenAI | null = null;
@@ -46,7 +64,7 @@ app.post('/api/ai/generate-brief', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: MISSING_KEY });
     }
 
     const prompt = `You are a licensed Senior Interior Architect and Site Survey Consultant analyzing an on-site field survey and room measurements.
@@ -127,7 +145,7 @@ Return JSON adhering strictly to the schema provided.`;
     return res.json({ success: true, brief: parsed, isFallback: false });
   } catch (error: unknown) {
     console.error('Error generating AI brief:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -140,7 +158,7 @@ app.post('/api/ai/consult-qa', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: MISSING_KEY });
     }
 
     const response = await ai.models.generateContent({
@@ -158,7 +176,7 @@ Provide concise, precise architectural, building code, clearances (ADA/NKBA), an
     return res.json({ success: true, answer: response.text });
   } catch (error: unknown) {
     console.error('Error in consult Q&A:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -171,8 +189,11 @@ app.post('/api/ai/transcribe-note', async (req, res) => {
     const ai = getGenAI();
     const cleanBase64 = stripDataUrl(typeof audioBase64 === 'string' ? audioBase64 : '');
 
-    if (!ai || !cleanBase64) {
-      return res.json({ success: false, error: AI_OFFLINE });
+    if (!ai) {
+      return res.json({ success: false, error: MISSING_KEY });
+    }
+    if (!cleanBase64) {
+      return res.json({ success: false, error: 'No audio or image data was received.' });
     }
 
     const response = await ai.models.generateContent({
@@ -201,12 +222,12 @@ Do not invent measurements, rooms, or site conditions that were not spoken.`,
 
     const transcription = (response.text || '').trim();
     if (!transcription) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: 'Gemini returned an empty transcription.' });
     }
     return res.json({ success: true, transcription });
   } catch (error: unknown) {
     console.error('Error transcribing audio:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -219,7 +240,7 @@ app.post('/api/ai/meeting-summary', async (req, res) => {
     const ai = getGenAI();
 
     if (!ai) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: MISSING_KEY });
     }
 
     const rooms = Array.isArray(project?.rooms) ? project.rooms : [];
@@ -283,12 +304,12 @@ Do not invent site facts that are not in the schedules, notes, or transcripts. P
 
     const summary = (response.text || '').trim();
     if (!summary) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: 'Gemini returned an empty meeting summary.' });
     }
     return res.json({ success: true, summary });
   } catch (error: unknown) {
     console.error('Error generating meeting summary:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -301,8 +322,11 @@ app.post('/api/ai/extract-ocr', async (req, res) => {
     const ai = getGenAI();
 
     const cleanBase64 = stripDataUrl(typeof imageBase64 === 'string' ? imageBase64 : '');
-    if (!ai || !cleanBase64) {
-      return res.json({ success: false, error: AI_OFFLINE });
+    if (!ai) {
+      return res.json({ success: false, error: MISSING_KEY });
+    }
+    if (!cleanBase64) {
+      return res.json({ success: false, error: 'No audio or image data was received.' });
     }
 
     const response = await ai.models.generateContent({
@@ -332,7 +356,7 @@ Format clearly with bulleted items and high-signal architectural labels.`,
 
     const extractedText = (response.text || '').trim();
     if (!extractedText) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: 'Gemini returned an empty OCR result.' });
     }
     return res.json({
       success: true,
@@ -341,7 +365,7 @@ Format clearly with bulleted items and high-signal architectural labels.`,
     });
   } catch (error: unknown) {
     console.error('Error in OCR extraction:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -353,8 +377,11 @@ app.post('/api/ai/site-photo-critique', async (req, res) => {
     const { imageBase64, mimeType = 'image/jpeg', question = '', roomContext = '' } = req.body ?? {};
     const ai = getGenAI();
     const cleanBase64 = stripDataUrl(typeof imageBase64 === 'string' ? imageBase64 : '');
-    if (!ai || !cleanBase64) {
-      return res.json({ success: false, error: AI_OFFLINE });
+    if (!ai) {
+      return res.json({ success: false, error: MISSING_KEY });
+    }
+    if (!cleanBase64) {
+      return res.json({ success: false, error: 'No audio or image data was received.' });
     }
 
     const response = await ai.models.generateContent({
@@ -375,12 +402,12 @@ Do not invent dimensions that are not visible. Flag anything that still needs a 
 
     const critique = (response.text || '').trim();
     if (!critique) {
-      return res.json({ success: false, error: AI_OFFLINE });
+      return res.json({ success: false, error: 'Gemini returned an empty photo critique.' });
     }
     return res.json({ success: true, critique });
   } catch (error: unknown) {
     console.error('Error critiquing site photo:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -392,8 +419,11 @@ app.post('/api/ai/fetch-address-details', async (req, res) => {
     const { address } = req.body;
     const ai = getGenAI();
 
-    if (!ai || !address) {
-      return res.json({ success: false, error: AI_OFFLINE });
+    if (!ai) {
+      return res.json({ success: false, error: MISSING_KEY });
+    }
+    if (!address) {
+      return res.json({ success: false, error: 'A site address is required.' });
     }
 
     const prompt = `You are a real estate cadastral data and parcel lookup engine.
@@ -424,7 +454,7 @@ Return JSON with this schema:
     return res.json({ success: true, details: parsed, isFallback: false });
   } catch (error: unknown) {
     console.error('Error fetching property details:', error);
-    return res.json({ success: false, error: AI_OFFLINE });
+    return res.json({ success: false, error: geminiError(error) });
   }
 });
 
@@ -571,7 +601,7 @@ app.use((req, res, next) => {
  * Start the server if this module is the main entry point, or it is ran via PM2.
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
  */
-if (isMainModule(import.meta.url) || process.env['pm_id']) {
+if (!process.env['VERCEL'] && (isMainModule(import.meta.url) || process.env['pm_id'])) {
   const port = process.env['PORT'] || 4000;
   app.listen(port, (error) => {
     if (error) {
@@ -585,5 +615,8 @@ if (isMainModule(import.meta.url) || process.env['pm_id']) {
 /**
  * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
  */
+export { app };
+export default app;
+
 export const reqHandler = createNodeRequestHandler(app);
 
