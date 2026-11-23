@@ -63,7 +63,7 @@ Provide a comprehensive, high-standard professional design consultation report, 
 Return JSON adhering strictly to the schema provided.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -150,7 +150,7 @@ app.post('/api/ai/consult-qa', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: `You are an expert Interior Architect and Field Superintendent advising a designer on-site.
 Context of active project & room measurements:
 ${JSON.stringify(context || {}, null, 2)}
@@ -185,7 +185,7 @@ app.post('/api/ai/transcribe-note', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: {
         parts: [
           {
@@ -286,7 +286,7 @@ Present dimensions in mm and areas in m². If the stored unit is imperial, conve
 Do not invent site facts that are not in the schedules, notes, or transcripts. Put unknowns under Follow-Up & Missing Site Checks.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
     });
 
@@ -318,7 +318,7 @@ app.post('/api/ai/extract-ocr', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: {
         parts: [
           {
@@ -373,7 +373,7 @@ app.post('/api/ai/site-photo-critique', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: {
         parts: [
           { inlineData: { mimeType: mimeType || 'image/jpeg', data: cleanBase64 } },
@@ -431,7 +431,7 @@ Return JSON with this schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

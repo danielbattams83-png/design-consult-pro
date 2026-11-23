@@ -86,7 +86,7 @@ ${JSON.stringify(projectData, null, 2)}
 Provide a comprehensive, high-standard professional design consultation report, material takeoff, and contractor risk analysis.
 Return JSON adhering strictly to the schema provided.`;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -166,7 +166,7 @@ Return JSON adhering strictly to the schema provided.`;
         return res.json({ success: false, error: MISSING_KEY });
       }
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: `You are an expert Interior Architect and Field Superintendent advising a designer on-site.
 Context of active project & room measurements:
 ${JSON.stringify(context || {}, null, 2)}
@@ -194,7 +194,7 @@ Provide concise, precise architectural, building code, clearances (ADA/NKBA), an
         return res.json({ success: false, error: "No audio or image data was received." });
       }
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: {
           parts: [
             {
@@ -274,7 +274,7 @@ Write a structured Markdown Concept Design Brief and use these headings exactly:
 Present dimensions in mm and areas in m\xB2. If the stored unit is imperial, convert feet to mm (\xD7 304.8) and square feet to m\xB2 (\xD7 0.092903). Use Australian terminology where the notes support it: soffit, eaves, ridge beam, raked ceiling, nib wall, load-bearing, damp proof course, BAL rating, setback, joinery, wet area, fall, cyclonic tie-down, boundary clearance.
 Do not invent site facts that are not in the schedules, notes, or transcripts. Put unknowns under Follow-Up & Missing Site Checks.`;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: prompt
       });
       const summary = (response.text || "").trim();
@@ -299,7 +299,7 @@ Do not invent site facts that are not in the schedules, notes, or transcripts. P
         return res.json({ success: false, error: "No audio or image data was received." });
       }
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: {
           parts: [
             {
@@ -348,7 +348,7 @@ Format clearly with bulleted items and high-signal architectural labels.`
         return res.json({ success: false, error: "No audio or image data was received." });
       }
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: {
           parts: [
             { inlineData: { mimeType: mimeType || "image/jpeg", data: cleanBase64 } },
@@ -398,7 +398,7 @@ Return JSON with this schema:
   "easements": "string"
 }`;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json"
