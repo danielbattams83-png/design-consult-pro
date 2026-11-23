@@ -89,8 +89,13 @@ export class ProjectStore {
     }
   }
 
+  resetToDemoProject(): void {
+    this.seedDemoProject();
+  }
+
   private loadFromStorage(): void {
     if (typeof window === 'undefined' || !window.localStorage) {
+      this.seedDemoProject();
       return;
     }
 
@@ -119,7 +124,10 @@ export class ProjectStore {
       console.warn('Failed to parse cached projects:', e);
     }
 
-    // Seed initial realistic project
+    this.seedDemoProject();
+  }
+
+  private seedDemoProject(): void {
     const initialProject = this.createSeedProject();
     this.projects.set([initialProject]);
     this.activeProjectId.set(initialProject.id);

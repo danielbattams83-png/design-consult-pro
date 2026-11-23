@@ -38,21 +38,21 @@ export class AuthService {
   }
 
   private loadPersistedAuth(): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    try {
-      const raw = localStorage.getItem(STORAGE_AUTH_USER);
-      if (raw) {
-        const parsed = JSON.parse(raw) as UserProfile;
-        if (parsed && parsed.email) {
-          this.currentUser.set(parsed);
-          return;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = localStorage.getItem(STORAGE_AUTH_USER);
+        if (raw) {
+          const parsed = JSON.parse(raw) as UserProfile;
+          if (parsed && parsed.email) {
+            this.currentUser.set(parsed);
+            return;
+          }
         }
+      } catch {
+        // Fallback to the default field session below.
       }
-    } catch {
-      // Fallback
     }
 
-    // Default to an active field surveyor session for seamless on-site testing if desired, or logged in
     this.currentUser.set({
       id: 'user_consult_pro_01',
       name: 'Alex Rivera',

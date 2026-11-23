@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MeasurementUnit, Project } from '../../models/project.model';
 import { ProjectStore } from '../../services/project-store.service';
-import { SurveyDataService } from '../../services/survey-data.service';
 import { AuthService } from '../../services/auth.service';
 import { NewSurveyComponent } from '../../components/new-survey/new-survey.component';
 
@@ -16,7 +15,6 @@ import { NewSurveyComponent } from '../../components/new-survey/new-survey.compo
 })
 export class DashboardComponent {
   store = inject(ProjectStore);
-  surveyService = inject(SurveyDataService);
   auth = inject(AuthService);
 
   // Accordion Step State (default open step 1 or step 3)
@@ -129,15 +127,11 @@ export class DashboardComponent {
 
   // Settings & Reset
   resetDemoData(): void {
-    this.surveyService.resetToMockDefaults();
+    this.store.resetToDemoProject();
     this.isSettingsModalOpen.set(false);
   }
 
   exportData(): void {
     this.store.exportAllProjectsJson();
-  }
-
-  logout(): void {
-    this.auth.logout();
   }
 }

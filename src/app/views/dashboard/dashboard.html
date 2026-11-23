@@ -689,67 +689,9 @@
             <mat-icon class="text-[18px] w-[18px] h-[18px]">restore</mat-icon>
             <span>Reset Active Mock Projects</span>
           </button>
-
-          <button
-            type="button"
-            (click)="logout()"
-            class="w-full min-h-[44px] bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <mat-icon class="text-[18px] w-[18px] h-[18px]">logout</mat-icon>
-            <span>Sign Out</span>
-          </button>
         </div>
       </div>
     </div>
   }
-
-  <!-- ============================================================== -->
-  <!-- STICKY BOTTOM MOBILE NAVIGATION BAR (Home, Surveys, Settings) -->
-  <!-- ============================================================== -->
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 text-white shadow-2xl flex items-center justify-around">
-    <!-- Tab 1: Home (Dashboard) -->
-    <button
-      type="button"
-      id="nav-tab-home"
-      (click)="navigateToTab('measure'); openStep.set(1)"
-      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-orange-400 font-bold text-[10px] cursor-pointer transition-colors"
-    >
-      <mat-icon class="text-[22px] w-[22px] h-[22px]">dashboard</mat-icon>
-      <span>Home</span>
-    </button>
-
-    <!-- Tab 2: Surveys (2D CAD & Measurements) -->
-    <button
-      type="button"
-      id="nav-tab-surveys"
-      (click)="navigateToTab('survey')"
-      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
-    >
-      <mat-icon class="text-[22px] w-[22px] h-[22px]">assignment</mat-icon>
-      <span>Surveys</span>
-    </button>
-
-    <!-- Tab 3: Takeoffs & CAD -->
-    <button
-      type="button"
-      id="nav-tab-measure"
-      (click)="navigateToTab('measure')"
-      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
-    >
-      <mat-icon class="text-[22px] w-[22px] h-[22px]">straighten</mat-icon>
-      <span>Measure</span>
-    </button>
-
-    <!-- Tab 4: Settings & Offline -->
-    <button
-      type="button"
-      id="nav-tab-settings"
-      (click)="isSettingsModalOpen.set(true)"
-      class="min-h-[48px] flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white font-medium text-[10px] cursor-pointer transition-colors"
-    >
-      <mat-icon class="text-[22px] w-[22px] h-[22px]">settings</mat-icon>
-      <span>Settings</span>
-    </button>
-  </nav>
 
 </div>

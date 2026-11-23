@@ -1,9 +1,4 @@
-@if (!isAuthenticated()) {
-  <!-- Full Screen Mobile-First Login View -->
-  <app-login></app-login>
-} @else {
-  <!-- Main Authenticated Field PWA Shell -->
-  <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased font-sans pb-20 md:pb-0">
+<div class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased font-sans pb-20 md:pb-0">
     <!-- Application Header & Top Navigation -->
     <app-header></app-header>
 
@@ -207,18 +202,8 @@
               <mat-icon class="text-[18px] w-[18px] h-[18px]">restore</mat-icon>
               <span>Reset Active Mock Projects</span>
             </button>
-
-            <button
-              type="button"
-              (click)="logout()"
-              class="w-full min-h-[44px] bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <mat-icon class="text-[18px] w-[18px] h-[18px]">logout</mat-icon>
-              <span>Sign Out</span>
-            </button>
           </div>
         </div>
       </div>
     }
   </div>
-}
